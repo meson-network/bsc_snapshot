@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -21,12 +23,17 @@ func Upload_r2(clictx *cli.Context) error {
 
 	//read params
 	originDir := clictx.String("dir")
-	// thread := clictx.Int("thread")
+	thread := clictx.Int("thread")
 	bucketName := clictx.String("bucket_name")
 	additional_path := clictx.String("additional_path")
 	accountId := clictx.String("account_id")
 	accessKeyId := clictx.String("access_key_id")
 	accessKeySecret := clictx.String("access_key_secret")
+
+	if thread == 0 {
+		thread = 3
+	}
+	threadChan := make(chan struct{}, thread)
 
 	// read json from originDir
 	configFilePath := filepath.Join(originDir, split_file.FILES_CONFIG_JSON_NAME)
@@ -47,16 +54,33 @@ func Upload_r2(clictx *cli.Context) error {
 
 	fileList := fileConfig.ChunkedFileList
 	errorFiles := []*split_file.ChunkedFileInfo{}
-	for index, v := range fileList {
-		localFilePath := filepath.Join(originDir, v.FileName)
-		err := uploadFile(client, bucketName, additional_path, v.FileName, localFilePath, v.Md5)
-		if err != nil {
-			log.Println(index+1, "/", len(fileList), v.FileName, "upload err:", err)
-			errorFiles = append(errorFiles, &v)
-		} else {
-			log.Println(index+1, "/", len(fileList), v.FileName, "uploaded")
-		}
+	var errorFilesLock sync.Mutex
+	var wg sync.WaitGroup
+	wg.Add(len(fileList))
+	counter := int64(0)
+	for _, v := range fileList {
+		fileInfo := v
+		threadChan <- struct{}{}
+		go func() {
+			defer func() {
+				<-threadChan
+				wg.Done()
+			}()
+			localFilePath := filepath.Join(originDir, fileInfo.FileName)
+			err := uploadFile(client, bucketName, additional_path, fileInfo.FileName, localFilePath, fileInfo.Md5)
+			c := atomic.AddInt64(&counter, 1)
+			if err != nil {
+				log.Println(c, "/", len(fileList), fileInfo.FileName, "upload err:", err)
+				errorFilesLock.Lock()
+				errorFiles = append(errorFiles, &fileInfo)
+				errorFilesLock.Unlock()
+			} else {
+				log.Println(c, "/", len(fileList), fileInfo.FileName, "uploaded")
+			}
+		}()
 	}
+
+	wg.Wait()
 
 	if len(errorFiles) > 0 {
 		log.Println("the following files upload failed, please try again:")
@@ -74,6 +98,8 @@ func Upload_r2(clictx *cli.Context) error {
 	} else {
 		log.Println(split_file.FILES_CONFIG_JSON_NAME, "uploaded")
 	}
+
+	log.Println("upload finish")
 
 	return nil
 
@@ -137,10 +163,15 @@ func uploadFile(client *s3.Client, bucketName string, additional_path string, fi
 	}
 	defer uploadFile.Close()
 
+	reader := &CustomReader{
+		fp:   uploadFile,
+		size: fileInfo.Size(),
+	}
+
 	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:        aws.String(bucketName),
 		Key:           aws.String(keyInRemote),
-		Body:          uploadFile,
+		Body:          reader,
 		ContentLength: fileInfo.Size(),
 	})
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/meson-network/bsc-data-file-utils/cmd_default/http/api"
+	"github.com/meson-network/bsc-data-file-utils/cmd_download"
 	"github.com/meson-network/bsc-data-file-utils/cmd_split"
 	"github.com/meson-network/bsc-data-file-utils/cmd_upload"
 )
@@ -56,10 +56,9 @@ func ConfigCmd() *cli.App {
 			{
 				Name:  CMD_NAME_DOWNLOAD,
 				Usage: "multithread download and merge files",
-				Flags: cmd_split.GetFlags(),
+				Flags: cmd_download.GetFlags(),
 				Action: func(clictx *cli.Context) error {
-					api.GenApiDocs()
-					return nil
+					return cmd_download.Download(clictx)
 				},
 			},
 			{

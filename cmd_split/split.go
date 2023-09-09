@@ -112,6 +112,7 @@ func splitFile(originFile string, destDir string, chunkSize int64) error {
 			FileName: name,
 			Md5:      md5Str,
 			Size:     fileSize,
+			Offset:   (i - 1) * chunkSize,
 		})
 	}
 	fmt.Println("split finish")

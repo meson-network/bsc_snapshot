@@ -1,6 +1,6 @@
 package split_file
 
-const FILES_CONFIG_JSON_NAME="files.json"
+const FILES_CONFIG_JSON_NAME = "files.json"
 
 type FileSplitConfig struct {
 	RawFile         RawFileInfo       `json:"raw_file"`
@@ -17,4 +17,5 @@ type ChunkedFileInfo struct {
 	FileName string `json:"file_name"`
 	Md5      string `json:"md5"`
 	Size     int64  `json:"size"`
+	Offset   int64  `json:"offset"`
 }
