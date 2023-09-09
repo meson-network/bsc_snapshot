@@ -1,0 +1,50 @@
+**/.DS_Store
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+ 
+
+# Editor directories and files
+.vscode
+default_dev
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+ 
+ # Dependency directories (remove the comment below to include it)
+# vendor/
+
+logs
+user_conf/*
+user_conf/*/*
+!user_conf/*.md
+
+**/dest
+
+#####################
+
+/assets/geo_ip/country_ipv4.csv
+/assets/geo_ip/country_ipv6.csv
+/assets/geo_ip/isp_ipv4.csv
+/assets/geo_ip/isp_ipv6.csv
+/root_conf/office.toml
+/test/
+
+**/*_test.go
+**/test.txt
+bsc-data-file-utils

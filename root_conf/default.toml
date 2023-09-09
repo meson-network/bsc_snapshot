@@ -1,0 +1,84 @@
+[build]
+mode = 'release' #debug
+
+[log]
+level = 'INFO'
+
+[token]
+salt = "clitemplate.com"
+
+[http]
+enable = true
+port = 80
+keep_alive = true #default true for common user application
+
+[https]
+enable = true
+port = 443
+keep_alive = true #default true for common user application
+crt_path = 'assets/cert/crt.crt'
+key_path = 'assets/cert/key.key'
+html_dir = 'assets/html'
+
+[auto_cert]
+enable = false
+check_interval = 3600
+crt_path = ''
+init_download = true
+key_path = ''
+url = ''
+
+ 
+
+[redis]
+enable = false
+use_tls = true
+host = 'localhost'
+port = 6379
+username = 'xxxx'
+password = 'xxxx'
+prefix = 'template'
+
+[spr]
+enable = false
+
+[general_counter]
+enable = false
+project_name = "cli_template"
+
+[db]
+enable = false
+host = 'localhost'
+port = 3306
+name = 'xxxx'
+username = 'xxxx'
+password = 'xxxx'
+
+[elasticsearch]
+enable = false
+host = 'localhost'
+username = 'xxxx'
+password = 'xxxx'
+
+[geo_ip]
+update_key=''
+enable = false
+dataset_version ='0.0.24'
+dataset_folder = 'assets/geo_ip'
+
+[leveldb]
+enable = false
+path = ''
+
+[smtp]
+enable = false
+from_email = 'noreply@xxx.com'
+host = ''
+port = 587
+password = ''
+username = ''
+
+[sqlite]
+enable = false
+path = ''
+
