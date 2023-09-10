@@ -72,8 +72,8 @@ func Upload_r2(clictx *cli.Context) error {
 			if err != nil {
 				log.Println(c, "/", len(fileList), fileInfo.FileName, "upload err:", err)
 				errorFilesLock.Lock()
+				defer errorFilesLock.Unlock()
 				errorFiles = append(errorFiles, &fileInfo)
-				errorFilesLock.Unlock()
 			} else {
 				log.Println(c, "/", len(fileList), fileInfo.FileName, "uploaded")
 			}

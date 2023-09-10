@@ -11,8 +11,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/meson-network/bsc-data-file-utils/src/split_file"
 	"github.com/urfave/cli/v2"
@@ -24,6 +28,10 @@ func Split(clictx *cli.Context) error {
 	originFile := clictx.String("file")
 	destDir := clictx.String("dest")
 	sizeStr := clictx.String("size")
+	thread := clictx.Int("thread")
+	if thread == 0 {
+		thread = runtime.NumCPU()
+	}
 
 	if originFile == "" {
 		fmt.Println("[ERROR] Invalid file. Please input the path of the source file that you want to split with param '--file=path to file'")
@@ -46,10 +54,10 @@ func Split(clictx *cli.Context) error {
 		return errors.New("size error")
 	}
 
-	return splitFile(originFile, destDir, chunkSize)
+	return splitFile(originFile, destDir, chunkSize, thread)
 }
 
-func splitFile(originFile string, destDir string, chunkSize int64) error {
+func splitFile(originFile string, destDir string, chunkSize int64, thread int) error {
 	// read origin file
 	fileInfo, err := os.Stat(originFile)
 	if err != nil {
@@ -66,12 +74,6 @@ func splitFile(originFile string, destDir string, chunkSize int64) error {
 		fmt.Println("[ERROR] source file is smaller than chunk size")
 		return errors.New("chunk size error")
 	}
-
-	fi, err := os.OpenFile(originFile, os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer fi.Close()
 
 	// if dest dir exist
 	dirInfo, err := os.Stat(destDir)
@@ -98,24 +100,55 @@ func splitFile(originFile string, destDir string, chunkSize int64) error {
 		EndPoint:        []string{},
 		ChunkedFileList: []split_file.ChunkedFileInfo{},
 	}
+	var jsonLock sync.Mutex
+	var wg sync.WaitGroup
+	wg.Add(int(num))
+	counter := int64(0)
+
+	threadChan := make(chan struct{}, thread)
+	errChan := make(chan error)
 
 	fmt.Println("start to split file", "chunk size:", chunkSize, "byte")
 	var i int64 = 1
 	for ; i <= int64(num); i++ {
-		name, fileSize, md5Str, err := genSplitFile(fileInfo, fi, i, chunkSize, destDir)
-		if err != nil {
-			fmt.Println("err:", err)
+		index := i
+
+		select {
+		case threadChan <- struct{}{}:
+		case err := <-errChan:
 			return err
 		}
-		fmt.Println("fileSize:", fileSize, "md5:", md5Str)
-		splitConfig.ChunkedFileList = append(splitConfig.ChunkedFileList, split_file.ChunkedFileInfo{
-			FileName: name,
-			Md5:      md5Str,
-			Size:     fileSize,
-			Offset:   (i - 1) * chunkSize,
-		})
+
+		go func() {
+			defer func() {
+				<-threadChan
+				wg.Done()
+			}()
+			name, fileSize, md5Str, err := genSplitFile(fileInfo, originFile, index, chunkSize, destDir)
+			if err != nil {
+				fmt.Println("err:", err)
+				errChan <- err
+				return
+			}
+			c := atomic.AddInt64(&counter, 1)
+			fmt.Println(c, "/", num, "fileName:",name, "fileSize:", fileSize, "md5:", md5Str)
+			jsonLock.Lock()
+			defer jsonLock.Unlock()
+			splitConfig.ChunkedFileList = append(splitConfig.ChunkedFileList, split_file.ChunkedFileInfo{
+				FileName: name,
+				Md5:      md5Str,
+				Size:     fileSize,
+				Offset:   (index - 1) * chunkSize,
+			})
+		}()
+
 	}
-	fmt.Println("split finish")
+
+	wg.Wait()
+
+	sort.Slice(splitConfig.ChunkedFileList,func(i, j int) bool {
+		return splitConfig.ChunkedFileList[i].Offset<splitConfig.ChunkedFileList[j].Offset
+	})
 
 	configFilePath := filepath.Join(destDir, split_file.FILES_CONFIG_JSON_NAME)
 	configJson, err := json.Marshal(splitConfig)
@@ -126,10 +159,19 @@ func splitFile(originFile string, destDir string, chunkSize int64) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("split finish")
+
 	return nil
 }
 
-func genSplitFile(fileInfo fs.FileInfo, fi *os.File, i int64, chunkSize int64, destDir string) (name string, size int64, md5Str string, err error) {
+func genSplitFile(fileInfo fs.FileInfo, originFilePath string, i int64, chunkSize int64, destDir string) (name string, size int64, md5Str string, err error) {
+	fi, err := os.OpenFile(originFilePath, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return "", 0, "", err
+	}
+	defer fi.Close()
+
 	fileName := fileInfo.Name()
 	partSize := chunkSize
 	_, err = fi.Seek((i-1)*chunkSize, 0)
@@ -143,7 +185,7 @@ func genSplitFile(fileInfo fs.FileInfo, fi *os.File, i int64, chunkSize int64, d
 	name = fmt.Sprintf("%s.%d", fileName, i)
 	dfName := fmt.Sprintf("./%s.%d", fileName, i)
 	dfName = filepath.Join(destDir, dfName)
-	fmt.Printf("gen file: %s\n", dfName)
+	
 	df, err := os.OpenFile(dfName, os.O_CREATE|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return "", 0, "", err

@@ -106,8 +106,8 @@ func Download(clictx *cli.Context) error {
 			if err != nil {
 				log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "download err:", err)
 				errorFilesLock.Lock()
+				defer errorFilesLock.Unlock()
 				errorFiles = append(errorFiles, &chunkInfo)
-				errorFilesLock.Unlock()
 			} else {
 				log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "downloaded")
 			}
