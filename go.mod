@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/fatih/color v1.13.0
 	github.com/imroc/req v0.3.2
-	github.com/json-iterator/go v1.1.12
 	github.com/urfave/cli/v2 v2.11.1
 )
 
@@ -16,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.5
 	github.com/coreservice-io/log v0.2.1
 	github.com/coreservice-io/utils v0.3.0
+	github.com/gosuri/uiprogress v0.0.1
 	github.com/pelletier/go-toml v1.9.5
 )
 
@@ -35,12 +35,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.21.5 // indirect
 	github.com/aws/smithy-go v1.14.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 )

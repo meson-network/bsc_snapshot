@@ -13,11 +13,3 @@ func GetFlags() (allflags []cli.Flag) {
 		&cli.StringFlag{Name: "access_key_secret", Required: true},
 	}
 }
-
-
-//originDir := clictx.String("dir")
-	// thread := clictx.Int("thread")
-	// bucketName := clictx.String("bucket_name")
-	// accountId := clictx.String("account_id")
-	// accessKeyId := clictx.String("access_key_id")
-	// accessKeySecret := clictx.String("access_key_secret")

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,7 +15,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meson-network/bsc-data-file-utils/src/split_file"
+	"github.com/gosuri/uiprogress"
+	"github.com/meson-network/bsc-data-file-utils/src/common/custom_reader"
+	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/urfave/cli/v2"
 )
 
@@ -36,7 +37,7 @@ func Download(clictx *cli.Context) error {
 	threadChan := make(chan struct{}, thread)
 
 	// download or read jsonConfig
-	config := split_file.FileSplitConfig{}
+	config := file_config.FileConfig{}
 	if strings.HasPrefix(jsonConfig, "http") {
 		// download json
 		client := &http.Client{Timeout: 20 * time.Second}
@@ -60,8 +61,19 @@ func Download(clictx *cli.Context) error {
 	}
 
 	// check endpoint
+	endPoint := ""
 	if len(config.EndPoint) == 0 {
-		return errors.New("download endpoint not exist")
+		if strings.HasPrefix(jsonConfig, "http") {
+			i := strings.LastIndex(jsonConfig, "/")
+			if i < 0 {
+				return errors.New("download end point error")
+			}
+			endPoint = jsonConfig[:i]
+		} else {
+			return errors.New("download endpoint not exist")
+		}
+	} else {
+		endPoint = config.EndPoint[0]
 	}
 
 	// gen raw file
@@ -86,7 +98,9 @@ func Download(clictx *cli.Context) error {
 	}
 	dFile.Close()
 
-	errorFiles := []*split_file.ChunkedFileInfo{}
+	uiprogress.Start()
+
+	errorFiles := []*file_config.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(len(config.ChunkedFileList))
@@ -100,42 +114,56 @@ func Download(clictx *cli.Context) error {
 				wg.Done()
 			}()
 
-			downloadUrl := config.EndPoint[0] + "/" + chunkInfo.FileName
-			err := downloadPart(downloadUrl, downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5)
 			c := atomic.AddInt64(&counter, 1)
+			bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
+			bar.PrependFunc(func(b *uiprogress.Bar) string {
+				return fmt.Sprintf(" %d / %d %s ", c, len(config.ChunkedFileList), chunkInfo.FileName)
+			})
+			bar.Set(0)
+
+			downloadUrl := endPoint + "/" + chunkInfo.FileName
+			err := downloadPart(downloadUrl, downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
 			if err != nil {
-				log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "download err:", err)
+				// log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "download err:", err)
+				bar.AppendFunc(func(b *uiprogress.Bar) string {
+					return "FAILED"
+				})
 				errorFilesLock.Lock()
 				defer errorFilesLock.Unlock()
 				errorFiles = append(errorFiles, &chunkInfo)
 			} else {
-				log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "downloaded")
+				bar.Set(100)
+				bar.AppendFunc(func(b *uiprogress.Bar) string {
+					return "SUCCESS"
+				})
+				// log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "downloaded")
 			}
 		}()
 
 	}
 
 	wg.Wait()
-
+	uiprogress.Stop()
 	if len(errorFiles) > 0 {
-		log.Println("the following files download failed, please try again:")
+
+		fmt.Println("the following files download failed, please try again:")
 		for _, v := range errorFiles {
-			log.Println(v.FileName)
+			fmt.Println(v.FileName)
 		}
 		return errors.New("download error")
 	}
 
-	err=os.Rename(downloadingFilePath,rawFilePath)
-	if err!=nil{
+	err = os.Rename(downloadingFilePath, rawFilePath)
+	if err != nil {
 		return err
 	}
 
-	log.Println("download finish")
+	fmt.Println("download finish")
 
 	return nil
 }
 
-func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, chunkOffset int64, chunkMd5 string) error {
+func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, chunkOffset int64, chunkMd5 string, bar *uiprogress.Bar) error {
 	// read local md5
 	file, err := os.OpenFile(downloadFilePath, os.O_RDWR, os.ModePerm)
 	if err != nil {
@@ -144,13 +172,13 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 	defer file.Close()
 	_, err = file.Seek(chunkOffset, 0)
 	if err != nil {
-		log.Println("seek err:", err)
+		fmt.Println("seek err:", err)
 		return err
 	}
 	h := md5.New()
 	_, err = io.CopyN(h, file, chunkSize)
 	if err != nil {
-		log.Println("read exist file chunk err:", err)
+		fmt.Println("read exist file chunk err:", err)
 	} else {
 		md5Str := hex.EncodeToString(h.Sum(nil))
 		if md5Str == chunkMd5 {
@@ -164,13 +192,24 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 		return err
 	}
 	defer resp.Body.Close()
+	if chunkSize != resp.ContentLength {
+		return errors.New("remote file size error")
+	}
+
 	file.Seek(chunkOffset, 0)
 	h = md5.New()
 	target := io.MultiWriter(file, h)
 
-	_, err = io.CopyN(target, resp.Body,chunkSize)
+	// use custom reader to show upload progress
+	reader := &custom_reader.CustomReader{
+		Reader: resp.Body,
+		Size:   chunkSize,
+		Bar:    bar,
+	}
+
+	_, err = io.CopyN(target, reader, chunkSize)
 	if err != nil {
-		log.Println("read body err:", err)
+		fmt.Println("read body err:", err)
 		return err
 	}
 	md5Str := hex.EncodeToString(h.Sum(nil))

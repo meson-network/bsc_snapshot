@@ -1,8 +1,8 @@
-package split_file
+package file_config
 
 const FILES_CONFIG_JSON_NAME = "files.json"
 
-type FileSplitConfig struct {
+type FileConfig struct {
 	RawFile         RawFileInfo       `json:"raw_file"`
 	ChunkedFileList []ChunkedFileInfo `json:"chunked_file_list"`
 	EndPoint        []string          `json:"end_point"`

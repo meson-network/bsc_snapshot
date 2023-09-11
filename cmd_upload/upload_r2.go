@@ -1,21 +1,18 @@
 package cmd_upload
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/meson-network/bsc-data-file-utils/src/split_file"
+	"github.com/meson-network/bsc-data-file-utils/src/file_config"
+	"github.com/meson-network/bsc-data-file-utils/src/uploader/uploader_r2"
+
+	"github.com/gosuri/uiprogress"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,30 +27,35 @@ func Upload_r2(clictx *cli.Context) error {
 	accessKeyId := clictx.String("access_key_id")
 	accessKeySecret := clictx.String("access_key_secret")
 
+	// default use 3 thread
 	if thread == 0 {
 		thread = 3
 	}
 	threadChan := make(chan struct{}, thread)
 
 	// read json from originDir
-	configFilePath := filepath.Join(originDir, split_file.FILES_CONFIG_JSON_NAME)
+	configFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
 	jsonContent, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return err
 	}
-	fileConfig := split_file.FileSplitConfig{}
+	fileConfig := file_config.FileConfig{}
 	err = json.Unmarshal(jsonContent, &fileConfig)
 	if err != nil {
 		return err
 	}
 
-	client, err := genR2Client(accountId, accessKeyId, accessKeySecret)
+	client, err := uploader_r2.GenR2Client(accountId, accessKeyId, accessKeySecret)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("start upload")
+
+	uiprogress.Start()
+
 	fileList := fileConfig.ChunkedFileList
-	errorFiles := []*split_file.ChunkedFileInfo{}
+	errorFiles := []*file_config.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(len(fileList))
@@ -66,117 +68,67 @@ func Upload_r2(clictx *cli.Context) error {
 				<-threadChan
 				wg.Done()
 			}()
-			localFilePath := filepath.Join(originDir, fileInfo.FileName)
-			err := uploadFile(client, bucketName, additional_path, fileInfo.FileName, localFilePath, fileInfo.Md5)
 			c := atomic.AddInt64(&counter, 1)
+			bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
+			bar.PrependFunc(func(b *uiprogress.Bar) string {
+				return fmt.Sprintf(" %d / %d %s ", c, len(fileList), fileInfo.FileName)
+			})
+			bar.Set(0)
+
+			localFilePath := filepath.Join(originDir, fileInfo.FileName)
+			err := uploader_r2.UploadFile(client, bucketName, additional_path, fileInfo.FileName, localFilePath, fileInfo.Md5, bar)
+
 			if err != nil {
-				log.Println(c, "/", len(fileList), fileInfo.FileName, "upload err:", err)
+				bar.AppendFunc(func(b *uiprogress.Bar) string {
+					return "FAILED"
+				})
 				errorFilesLock.Lock()
 				defer errorFilesLock.Unlock()
 				errorFiles = append(errorFiles, &fileInfo)
 			} else {
-				log.Println(c, "/", len(fileList), fileInfo.FileName, "uploaded")
+				bar.Set(100)
+				bar.AppendFunc(func(b *uiprogress.Bar) string {
+					return "SUCCESS"
+				})
 			}
 		}()
 	}
 
 	wg.Wait()
-
+	
 	if len(errorFiles) > 0 {
-		log.Println("the following files upload failed, please try again:")
+		uiprogress.Stop()
+		fmt.Println("the following files upload failed, please try again:")
 		for _, v := range errorFiles {
-			log.Println(v.FileName)
+			fmt.Println(v.FileName)
 		}
 		return errors.New("upload error")
 	}
 
 	//upload config
-	localFilePath := filepath.Join(originDir, split_file.FILES_CONFIG_JSON_NAME)
-	err = uploadFile(client, bucketName, additional_path, split_file.FILES_CONFIG_JSON_NAME, localFilePath, "")
-	if err != nil {
-		log.Println(split_file.FILES_CONFIG_JSON_NAME, "upload err:", err)
-	} else {
-		log.Println(split_file.FILES_CONFIG_JSON_NAME, "uploaded")
-	}
-
-	log.Println("upload finish")
-
-	return nil
-
-}
-
-func genR2Client(accountId string, accessKeyId string, accessKeySecret string) (*s3.Client, error) {
-	r2Resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		return aws.Endpoint{
-			URL: fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountId),
-		}, nil
+	localFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
+	bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
+	bar.Set(0)
+	bar.PrependFunc(func(b *uiprogress.Bar) string {
+		return fmt.Sprintf(" %s ", file_config.FILES_CONFIG_JSON_NAME)
 	})
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithEndpointResolverWithOptions(r2Resolver),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyId, accessKeySecret, "")),
-	)
+	err = uploader_r2.UploadFile(client, bucketName, additional_path, file_config.FILES_CONFIG_JSON_NAME, localFilePath, "", bar)
 	if err != nil {
-		return nil, err
-	}
-
-	client := s3.NewFromConfig(cfg)
-	return client, nil
-}
-
-func uploadFile(client *s3.Client, bucketName string, additional_path string, fileName string, localFilePath string, localFileMd5 string) error {
-	// get fileInfo from bucket
-	// ignore err, if info==nil, just reupload file
-	keyInRemote := fileName
-	if additional_path != "" {
-		keyInRemote = additional_path + "/" + fileName
-	}
-
-	if localFileMd5 != "" {
-		info, _ := client.GetObject(context.Background(), &s3.GetObjectInput{
-			Bucket: &bucketName,
-			Key:    aws.String(keyInRemote),
+		bar.AppendFunc(func(b *uiprogress.Bar) string {
+			return "FAILED"
 		})
-
-		// if exist check md5
-		if info != nil && info.ETag != nil {
-			remoteMd5 := *info.ETag
-			localMd5 := "\"" + localFileMd5 + "\""
-
-			if remoteMd5 == localMd5 {
-				// if same file, upload success
-				log.Println("file already uploaded")
-				return nil
-			}
-		}
+		uiprogress.Stop()
+		fmt.Println("upload json file error")
+	} else {
+		bar.Set(100)
+		bar.AppendFunc(func(b *uiprogress.Bar) string {
+			return "SUCCESS"
+		})
+		uiprogress.Stop()
+		fmt.Println("upload job finish")
 	}
-
-	//  upload new one
-	fileInfo, err := os.Stat(localFilePath)
-	if err != nil {
-		return err
-	}
-
-	uploadFile, err := os.OpenFile(localFilePath, os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer uploadFile.Close()
-
-	reader := &CustomReader{
-		fp:   uploadFile,
-		size: fileInfo.Size(),
-	}
-
-	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket:        aws.String(bucketName),
-		Key:           aws.String(keyInRemote),
-		Body:          reader,
-		ContentLength: fileInfo.Size(),
-	})
-	if err != nil {
-		return err
-	}
+	
 
 	return nil
 }
