@@ -18,6 +18,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const default_dest = "./dest"
+
 func Split(clictx *cli.Context) error {
 
 	//read params
@@ -35,8 +37,8 @@ func Split(clictx *cli.Context) error {
 	}
 
 	if destDir == "" {
-		fmt.Println("[INFO] No destination folder is entered, the default folder './dest' will be used")
-		destDir = "./dest"
+		fmt.Println("[INFO] No destination folder is entered, the default folder '" + default_dest + "' will be used")
+		destDir = default_dest
 	}
 
 	if sizeStr == "" {

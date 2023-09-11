@@ -11,5 +11,6 @@ func GetFlags() (allflags []cli.Flag) {
 		&cli.StringFlag{Name: "account_id", Required: true},
 		&cli.StringFlag{Name: "access_key_id", Required: true},
 		&cli.StringFlag{Name: "access_key_secret", Required: true},
+		&cli.IntFlag{Name: "retry_times", Required: false},
 	}
 }

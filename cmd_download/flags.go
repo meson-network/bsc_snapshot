@@ -6,6 +6,6 @@ func GetFlags() (allflags []cli.Flag) {
 	return []cli.Flag{
 		&cli.StringFlag{Name: "file_config", Required: true},
 		&cli.StringFlag{Name: "thread", Required: false},
+		&cli.IntFlag{Name: "retry_times", Required: false},
 	}
 }
-

@@ -21,10 +21,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const default_retry_times = 3
+const default_thread = 5
+
 func Download(clictx *cli.Context) error {
 
 	jsonConfig := clictx.String("file_config")
 	thread := clictx.Int("thread")
+	retry_times := clictx.Int("retry_times")
 
 	if jsonConfig == "" {
 		fmt.Println("[ERROR] json config error")
@@ -32,9 +36,13 @@ func Download(clictx *cli.Context) error {
 	}
 
 	if thread == 0 {
-		thread = 3
+		thread = default_thread
 	}
 	threadChan := make(chan struct{}, thread)
+
+	if retry_times == 0 {
+		retry_times = default_retry_times
+	}
 
 	// download or read jsonConfig
 	config := file_config.FileConfig{}
@@ -87,13 +95,14 @@ func Download(clictx *cli.Context) error {
 
 	downloadingFileName := config.RawFile.FileName + ".downloading"
 	downloadingFilePath := filepath.Join("./", downloadingFileName)
-	dFile, err := os.OpenFile(downloadingFilePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
+	dFile, err := os.OpenFile(downloadingFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	err = dFile.Truncate(config.RawFile.Size)
 	if err != nil {
+		dFile.Close()
 		return err
 	}
 	dFile.Close()
@@ -119,27 +128,33 @@ func Download(clictx *cli.Context) error {
 			bar.PrependFunc(func(b *uiprogress.Bar) string {
 				return fmt.Sprintf(" %d / %d %s ", c, len(config.ChunkedFileList), chunkInfo.FileName)
 			})
-			bar.Set(0)
 
-			downloadUrl := endPoint + "/" + chunkInfo.FileName
-			err := downloadPart(downloadUrl, downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
-			if err != nil {
-				// log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "download err:", err)
-				bar.AppendFunc(func(b *uiprogress.Bar) string {
-					return "FAILED"
-				})
-				errorFilesLock.Lock()
-				defer errorFilesLock.Unlock()
-				errorFiles = append(errorFiles, &chunkInfo)
-			} else {
-				bar.Set(100)
-				bar.AppendFunc(func(b *uiprogress.Bar) string {
-					return "SUCCESS"
-				})
-				// log.Println(c, "/", len(config.ChunkedFileList), chunkInfo.FileName, "downloaded")
+			// try some times if download failed
+			for try := 0; try < retry_times; try++ {
+				bar.Set(0)
+
+				downloadUrl := endPoint + "/" + chunkInfo.FileName
+				err := downloadPart(downloadUrl, downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
+				if err != nil {
+					if try < retry_times-1 {
+						time.Sleep(3 * time.Second)
+						continue
+					}
+					bar.AppendFunc(func(b *uiprogress.Bar) string {
+						return "FAILED"
+					})
+					errorFilesLock.Lock()
+					defer errorFilesLock.Unlock()
+					errorFiles = append(errorFiles, &chunkInfo)
+				} else {
+					bar.Set(100)
+					bar.AppendFunc(func(b *uiprogress.Bar) string {
+						return "SUCCESS"
+					})
+					break
+				}
 			}
 		}()
-
 	}
 
 	wg.Wait()

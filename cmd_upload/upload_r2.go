@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/meson-network/bsc-data-file-utils/src/uploader/uploader_r2"
@@ -15,6 +16,9 @@ import (
 	"github.com/gosuri/uiprogress"
 	"github.com/urfave/cli/v2"
 )
+
+const default_retry_times = 3
+const default_thread = 5
 
 func Upload_r2(clictx *cli.Context) error {
 
@@ -26,12 +30,17 @@ func Upload_r2(clictx *cli.Context) error {
 	accountId := clictx.String("account_id")
 	accessKeyId := clictx.String("access_key_id")
 	accessKeySecret := clictx.String("access_key_secret")
+	retry_times := clictx.Int("retry_times")
 
-	// default use 3 thread
+	// default use thread
 	if thread == 0 {
-		thread = 3
+		thread = default_thread
 	}
 	threadChan := make(chan struct{}, thread)
+
+	if retry_times == 0 {
+		retry_times = default_retry_times
+	}
 
 	// read json from originDir
 	configFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
@@ -73,29 +82,38 @@ func Upload_r2(clictx *cli.Context) error {
 			bar.PrependFunc(func(b *uiprogress.Bar) string {
 				return fmt.Sprintf(" %d / %d %s ", c, len(fileList), fileInfo.FileName)
 			})
-			bar.Set(0)
 
-			localFilePath := filepath.Join(originDir, fileInfo.FileName)
-			err := uploader_r2.UploadFile(client, bucketName, additional_path, fileInfo.FileName, localFilePath, fileInfo.Md5, bar)
+			// try some times if upload failed
+			for try := 0; try < retry_times; try++ {
+				bar.Set(0)
 
-			if err != nil {
-				bar.AppendFunc(func(b *uiprogress.Bar) string {
-					return "FAILED"
-				})
-				errorFilesLock.Lock()
-				defer errorFilesLock.Unlock()
-				errorFiles = append(errorFiles, &fileInfo)
-			} else {
-				bar.Set(100)
-				bar.AppendFunc(func(b *uiprogress.Bar) string {
-					return "SUCCESS"
-				})
+				localFilePath := filepath.Join(originDir, fileInfo.FileName)
+				err := uploader_r2.UploadFile(client, bucketName, additional_path, fileInfo.FileName, localFilePath, fileInfo.Md5, bar)
+
+				if err != nil {
+					if try < retry_times-1 {
+						time.Sleep(3 * time.Second)
+						continue
+					}
+					bar.AppendFunc(func(b *uiprogress.Bar) string {
+						return "FAILED"
+					})
+					errorFilesLock.Lock()
+					defer errorFilesLock.Unlock()
+					errorFiles = append(errorFiles, &fileInfo)
+				} else {
+					bar.Set(100)
+					bar.AppendFunc(func(b *uiprogress.Bar) string {
+						return "SUCCESS"
+					})
+					break
+				}
 			}
 		}()
 	}
 
 	wg.Wait()
-	
+
 	if len(errorFiles) > 0 {
 		uiprogress.Stop()
 		fmt.Println("the following files upload failed, please try again:")
@@ -128,7 +146,6 @@ func Upload_r2(clictx *cli.Context) error {
 		uiprogress.Stop()
 		fmt.Println("upload job finish")
 	}
-	
 
 	return nil
 }
