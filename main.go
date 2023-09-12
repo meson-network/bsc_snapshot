@@ -11,6 +11,6 @@ func main() {
 	//config app to run
 	errRun := cmd.ConfigCmd().Run(os.Args)
 	if errRun != nil {
-		panic(errRun)
+		os.Exit(1)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -63,6 +64,7 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 			fmt.Println("[ERROR] source file not exist")
 			return errors.New("source file not exist")
 		}
+		fmt.Println("[ERROR] read source file err:", err.Error())
 		return errors.New("source file not exist")
 	}
 
@@ -75,16 +77,24 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 	// if dest dir exist
 	dirInfo, err := os.Stat(destDir)
 	if err != nil && !os.IsNotExist(err) {
+		fmt.Println("[ERROR] dest dir err:", err.Error())
 		return err
 	}
 	if dirInfo != nil {
-		// todo warn user
-
+		fmt.Print("[WARN] dest dir already exist, all content will be overwrite (yes or no ?):")
+		var input string
+		fmt.Scanln(&input)
+		input = strings.TrimSpace(input)
+		input = strings.ToLower(input)
+		if input != "y" && input != "yes" {
+			return nil
+		}
 		os.RemoveAll(destDir)
 	}
 
 	err = os.MkdirAll(destDir, os.ModePerm)
 	if err != nil {
+		fmt.Println("[ERROR] build dest dir err:", err.Error())
 		return err
 	}
 
@@ -105,7 +115,7 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 	threadChan := make(chan struct{}, thread)
 	errChan := make(chan error)
 
-	fmt.Println("start to split file", "chunk size:", chunkSize, "byte")
+	fmt.Println("[INFO] start to split file", "chunk size:", chunkSize, "byte")
 	var i int64 = 1
 	for ; i <= int64(num); i++ {
 		index := i
@@ -150,14 +160,16 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 	configFilePath := filepath.Join(destDir, file_config.FILES_CONFIG_JSON_NAME)
 	configJson, err := json.Marshal(splitConfig)
 	if err != nil {
+		fmt.Println("[ERROR] marshal file config err:", err.Error())
 		return err
 	}
 	err = os.WriteFile(configFilePath, configJson, os.ModePerm)
 	if err != nil {
+		fmt.Println("[ERROR] save file config err:", err.Error())
 		return err
 	}
 
-	fmt.Println("split finish")
+	fmt.Println("[INFO] split finish")
 
 	return nil
 }

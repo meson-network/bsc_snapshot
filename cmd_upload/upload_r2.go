@@ -35,12 +35,12 @@ func Upload_r2(clictx *cli.Context) error {
 	retry_times := clictx.Int("retry_times")
 
 	// default use thread
-	if thread == 0 {
+	if thread <= 0 {
 		thread = default_thread
 	}
 	threadChan := make(chan struct{}, thread)
 
-	if retry_times == 0 {
+	if retry_times <= 0 {
 		retry_times = default_retry_times
 	}
 
@@ -48,20 +48,23 @@ func Upload_r2(clictx *cli.Context) error {
 	configFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
 	jsonContent, err := os.ReadFile(configFilePath)
 	if err != nil {
+		fmt.Println("[ERROR] read file config err:",err)
 		return err
 	}
 	fileConfig := file_config.FileConfig{}
 	err = json.Unmarshal(jsonContent, &fileConfig)
 	if err != nil {
+		fmt.Println("[ERROR] unmarshal file config err:",err)
 		return err
 	}
 
 	client, err := uploader_r2.GenR2Client(accountId, accessKeyId, accessKeySecret)
 	if err != nil {
+		fmt.Println("[ERROR] gen r2 client err:",err)
 		return err
 	}
 
-	fmt.Println("start upload")
+	fmt.Println("[INFO] start upload...")
 
 	fileList := fileConfig.ChunkedFileList
 	errorFiles := []*file_config.ChunkedFileInfo{}
@@ -85,7 +88,7 @@ func Upload_r2(clictx *cli.Context) error {
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(
-					decor.Elapsed(decor.ET_STYLE_GO), "SUCCESS ",
+					decor.Name(""), "SUCCESS ",
 				),
 				decor.OnAbort(
 					decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
@@ -102,7 +105,6 @@ func Upload_r2(clictx *cli.Context) error {
 
 			bar.SetPriority(math.MaxInt - int(c))
 
-
 			// try some times if upload failed
 			for try := 0; try < retry_times; try++ {
 				bar.SetCurrent(0)
@@ -115,9 +117,7 @@ func Upload_r2(clictx *cli.Context) error {
 						time.Sleep(3 * time.Second)
 						continue
 					}
-					// bar.AppendFunc(func(b *uiprogress.Bar) string {
-					// 	return "FAILED"
-					// })
+
 					errorFilesLock.Lock()
 					defer errorFilesLock.Unlock()
 					errorFiles = append(errorFiles, &fileInfo)
@@ -138,7 +138,7 @@ func Upload_r2(clictx *cli.Context) error {
 	wg.Wait()
 
 	if len(errorFiles) > 0 {
-		fmt.Println("the following files upload failed, please try again:")
+		fmt.Println("[ERROR] the following files upload failed, please try again:")
 		for _, v := range errorFiles {
 			fmt.Println(v.FileName)
 		}
@@ -147,11 +147,6 @@ func Upload_r2(clictx *cli.Context) error {
 
 	//upload config
 	localFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
-	// bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
-	// bar.Set(0)
-	// bar.PrependFunc(func(b *uiprogress.Bar) string {
-	// 	return fmt.Sprintf(" %s ", file_config.FILES_CONFIG_JSON_NAME)
-	// })
 	u_p:=mpb.New(mpb.WithAutoRefresh())
 	bar :=u_p.New(int64(100),
 		mpb.BarStyle(),
@@ -163,7 +158,7 @@ func Upload_r2(clictx *cli.Context) error {
 		),
 		mpb.AppendDecorators(
 			decor.OnComplete(
-				decor.Elapsed(decor.ET_STYLE_GO), "SUCCESS ",
+				decor.Name(""), "SUCCESS ",
 			),
 			decor.OnAbort(
 				decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
@@ -175,12 +170,12 @@ func Upload_r2(clictx *cli.Context) error {
 	p.Wait()
 	if err != nil {
 		bar.Abort(false)
-		fmt.Println("upload json file error")
+		fmt.Println("[ERROR] upload json file error")
 	} else {
 		if !bar.Completed() {
 			bar.SetCurrent(100)
 		}
-		fmt.Println("upload job finish")
+		fmt.Println("[INFO] upload job finish")
 	}
 
 	return nil

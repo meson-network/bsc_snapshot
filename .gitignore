@@ -46,5 +46,4 @@ user_conf/*/*
 /test/
 
 **/*_test.go
-**/test.txt
 bsc-data-file-utils

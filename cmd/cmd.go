@@ -6,6 +6,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/meson-network/bsc-data-file-utils/cmd_download"
+	"github.com/meson-network/bsc-data-file-utils/cmd_endpoint"
 	"github.com/meson-network/bsc-data-file-utils/cmd_split"
 	"github.com/meson-network/bsc-data-file-utils/cmd_upload"
 )
@@ -13,7 +14,7 @@ import (
 const CMD_NAME_SPLIT = "split"
 const CMD_NAME_DOWNLOAD = "download"
 const CMD_NAME_UPLOAD = "upload"
-const CMD_NAME_MERGE = "merge"
+const CMD_NAME_ENDPOINT = "endpoint"
 
 // //////config to do cmd ///////////
 func ConfigCmd() *cli.App {
@@ -47,13 +48,69 @@ func ConfigCmd() *cli.App {
 			{
 				Name:  CMD_NAME_UPLOAD,
 				Usage: "upload files",
-				Flags: cmd_upload.GetFlags(),
-				Action: func(clictx *cli.Context) error {
-					cmd_upload.Upload_r2(clictx)
-					return nil
+				Subcommands: []*cli.Command{
+					{
+						Name:  "r2",
+						Flags: cmd_upload.GetFlags(),
+						Usage: "upload to cloudflare R2 storage",
+						Action: func(clictx *cli.Context) error {
+							cmd_upload.Upload_r2(clictx)
+							return nil
+						},
+					},
 				},
 			},
-
+			{
+				Name:  CMD_NAME_ENDPOINT,
+				Usage: "set endpoint",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "add",
+						Flags: cmd_endpoint.GetFlags(),
+						Usage: "add new endpoints",
+						Action: func(clictx *cli.Context) error {
+							cmd_endpoint.AddEndpoint(clictx)
+							return nil
+						},
+					},
+					{
+						Name:  "remove",
+						Flags: cmd_endpoint.GetFlags(),
+						Usage: "remove endpoints",
+						Action: func(clictx *cli.Context) error {
+							cmd_endpoint.RemoveEndpoint(clictx)
+							return nil
+						},
+					},
+					{
+						Name:  "set",
+						Flags: cmd_endpoint.GetFlags(),
+						Usage: "reset endpoints",
+						Action: func(clictx *cli.Context) error {
+							cmd_endpoint.SetEndpoint(clictx)
+							return nil
+						},
+					},
+					{
+						Name:  "clear",
+						Flags: cmd_endpoint.GetFlags(),
+						Usage: "remove all exist endpoints",
+						Action: func(clictx *cli.Context) error {
+							cmd_endpoint.ClearEndpoint(clictx)
+							return nil
+						},
+					},
+					{
+						Name:  "print",
+						Flags: cmd_endpoint.GetFlags(),
+						Usage: "remove all exist endpoints",
+						Action: func(clictx *cli.Context) error {
+							cmd_endpoint.PrintEndpoint(clictx)
+							return nil
+						},
+					},
+				},
+			},
 		},
 	}
 }

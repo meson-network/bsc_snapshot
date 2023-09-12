@@ -29,58 +29,73 @@ const default_thread = 5
 
 func Download(clictx *cli.Context) error {
 
-	jsonConfig := clictx.String("file_config")
+	jsonConfigAddress := clictx.String("file_config")
 	thread := clictx.Int("thread")
 	retry_times := clictx.Int("retry_times")
 
-	if jsonConfig == "" {
-		fmt.Println("[ERROR] json config error")
+	if jsonConfigAddress == "" {
+		fmt.Println("[ERROR] json config error, please input correct address or file path")
 		return errors.New("json config error")
 	}
 
-	if thread == 0 {
+	if thread <= 0 {
 		thread = default_thread
 	}
 	threadChan := make(chan struct{}, thread)
 
-	if retry_times == 0 {
+	if retry_times <= 0 {
 		retry_times = default_retry_times
 	}
 
 	// download or read jsonConfig
 	config := file_config.FileConfig{}
-	if strings.HasPrefix(jsonConfig, "http") {
+	if strings.HasPrefix(jsonConfigAddress, "http") {
 		// download json
 		client := &http.Client{Timeout: 20 * time.Second}
-		resp, err := client.Get(jsonConfig)
+		resp, err := client.Get(jsonConfigAddress)
 		if err != nil {
+			fmt.Println("[ERROR] get json config error:", err.Error())
 			return err
 		}
 		defer resp.Body.Close()
 		content, err := io.ReadAll(resp.Body)
 		if err != nil {
+			fmt.Println("[ERROR] get json config error:", err.Error())
 			return err
 		}
-		json.Unmarshal(content, &config)
+		err = json.Unmarshal(content, &config)
+		if err != nil {
+			fmt.Println("[ERROR] json config unmarshal error:", err.Error())
+			return err
+		}
 	} else {
 		// read json file
-		content, err := os.ReadFile(jsonConfig)
+		content, err := os.ReadFile(jsonConfigAddress)
 		if err != nil {
+			fmt.Println("[ERROR] read json config error:", err.Error())
 			return err
 		}
-		json.Unmarshal(content, &config)
+		err = json.Unmarshal(content, &config)
+		if err != nil {
+			fmt.Println("[ERROR] json config unmarshal error:", err.Error())
+			return err
+		}
 	}
 
 	// check endpoint
 	endPoint := ""
 	if len(config.EndPoint) == 0 {
-		if strings.HasPrefix(jsonConfig, "http") {
-			i := strings.LastIndex(jsonConfig, "/")
+		// if no end point info in json, default use json config download path
+		if strings.HasPrefix(jsonConfigAddress, "http") {
+			i := strings.LastIndex(jsonConfigAddress, "/")
 			if i < 0 {
-				return errors.New("download end point error")
+				fmt.Println("[ERROR] download endpoint error")
+				return errors.New("download endpoint error")
 			}
-			endPoint = jsonConfig[:i]
+			fmt.Println("[INFO] use some endpoint with json config file")
+			endPoint = jsonConfigAddress[:i]
 		} else {
+			fmt.Println("[ERROR] download endpoint not exist")
 			return errors.New("download endpoint not exist")
 		}
 	} else {
@@ -92,7 +107,7 @@ func Download(clictx *cli.Context) error {
 	fileStat, _ := os.Stat(rawFilePath)
 	// file already exist
 	if fileStat != nil {
-		fmt.Println("file already exist")
+		fmt.Println("[ERROR]", "<", config.RawFile.FileName, ">", "already exist")
 		return errors.New("file exist")
 	}
 
@@ -100,15 +115,19 @@ func Download(clictx *cli.Context) error {
 	downloadingFilePath := filepath.Join("./", downloadingFileName)
 	dFile, err := os.OpenFile(downloadingFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
+		fmt.Println("[ERROR] open file err:", err.Error())
 		return err
 	}
 
 	err = dFile.Truncate(config.RawFile.Size)
 	if err != nil {
 		dFile.Close()
+		fmt.Println("[ERROR] handle file err:", err.Error())
 		return err
 	}
 	dFile.Close()
+
+	fmt.Println("[INFO] start download...")
 
 	errorFiles := []*file_config.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
@@ -131,11 +150,12 @@ func Download(clictx *cli.Context) error {
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(
-					decor.Elapsed(decor.ET_STYLE_GO), "SUCCESS ",
+					decor.Name(""), "SUCCESS ",
 				),
 				decor.OnAbort(
 					decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
 				),
+				
 			),
 		)
 		bar.SetPriority(int(c))
@@ -178,7 +198,7 @@ func Download(clictx *cli.Context) error {
 	wg.Wait()
 	if len(errorFiles) > 0 {
 
-		fmt.Println("the following files download failed, please try again:")
+		fmt.Println("[ERROR] the following files download failed, please try again:")
 		for _, v := range errorFiles {
 			fmt.Println(v.FileName)
 		}
@@ -187,10 +207,11 @@ func Download(clictx *cli.Context) error {
 
 	err = os.Rename(downloadingFilePath, rawFilePath)
 	if err != nil {
+		fmt.Println("[ERROR] rename download file err:",err.Error())
 		return err
 	}
 
-	fmt.Println("download finish")
+	fmt.Println("[INFO] download finish")
 
 	return nil
 }
