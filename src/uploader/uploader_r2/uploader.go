@@ -9,8 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/gosuri/uiprogress"
 	"github.com/meson-network/bsc-data-file-utils/src/common/custom_reader"
+	"github.com/vbauerster/mpb/v8"
 )
 
 func GenR2Client(accountId string, accessKeyId string, accessKeySecret string) (*s3.Client, error) {
@@ -32,7 +32,7 @@ func GenR2Client(accountId string, accessKeyId string, accessKeySecret string) (
 	return client, nil
 }
 
-func UploadFile(client *s3.Client, bucketName string, additional_path string, fileName string, localFilePath string, localFileMd5 string, bar *uiprogress.Bar) error {
+func UploadFile(client *s3.Client, bucketName string, additional_path string, fileName string, localFilePath string, localFileMd5 string, bar *mpb.Bar) error {
 
 	keyInRemote := fileName
 	if additional_path != "" {
@@ -77,8 +77,8 @@ func UploadFile(client *s3.Client, bucketName string, additional_path string, fi
 	// use custom reader to show upload progress
 	reader := &custom_reader.CustomReader{
 		Reader: uploadFile,
-		Size: fileInfo.Size(),
-		Bar:  bar,
+		Size:   fileInfo.Size(),
+		Bar:    bar,
 	}
 
 	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{

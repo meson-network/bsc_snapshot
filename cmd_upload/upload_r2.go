@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,8 +13,9 @@ import (
 
 	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/meson-network/bsc-data-file-utils/src/uploader/uploader_r2"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 
-	"github.com/gosuri/uiprogress"
 	"github.com/urfave/cli/v2"
 )
 
@@ -61,31 +63,49 @@ func Upload_r2(clictx *cli.Context) error {
 
 	fmt.Println("start upload")
 
-	uiprogress.Start()
-
 	fileList := fileConfig.ChunkedFileList
 	errorFiles := []*file_config.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
 	var wg sync.WaitGroup
+	p := mpb.New(mpb.WithWaitGroup(&wg), mpb.WithAutoRefresh())
 	wg.Add(len(fileList))
 	counter := int64(0)
 	for _, v := range fileList {
 		fileInfo := v
 		threadChan <- struct{}{}
+
+		c := atomic.AddInt64(&counter, 1)
+		bar := p.AddBar(int64(100),
+			mpb.BarFillerClearOnComplete(),
+			mpb.PrependDecorators(
+				// simple name decorator
+				decor.Name(fmt.Sprintf(" %d / %d %s ", c, len(fileList), fileInfo.FileName)),
+				// decor.DSyncWidth bit enables column width synchronization
+				decor.Percentage(decor.WCSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.OnComplete(
+					decor.Elapsed(decor.ET_STYLE_GO), "SUCCESS ",
+				),
+				decor.OnAbort(
+					decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
+				),
+			),
+		)
+		bar.SetPriority(int(c))
+
 		go func() {
 			defer func() {
 				<-threadChan
 				wg.Done()
 			}()
-			c := atomic.AddInt64(&counter, 1)
-			bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
-			bar.PrependFunc(func(b *uiprogress.Bar) string {
-				return fmt.Sprintf(" %d / %d %s ", c, len(fileList), fileInfo.FileName)
-			})
+
+			bar.SetPriority(math.MaxInt - int(c))
+
 
 			// try some times if upload failed
 			for try := 0; try < retry_times; try++ {
-				bar.Set(0)
+				bar.SetCurrent(0)
 
 				localFilePath := filepath.Join(originDir, fileInfo.FileName)
 				err := uploader_r2.UploadFile(client, bucketName, additional_path, fileInfo.FileName, localFilePath, fileInfo.Md5, bar)
@@ -95,27 +115,29 @@ func Upload_r2(clictx *cli.Context) error {
 						time.Sleep(3 * time.Second)
 						continue
 					}
-					bar.AppendFunc(func(b *uiprogress.Bar) string {
-						return "FAILED"
-					})
+					// bar.AppendFunc(func(b *uiprogress.Bar) string {
+					// 	return "FAILED"
+					// })
 					errorFilesLock.Lock()
 					defer errorFilesLock.Unlock()
 					errorFiles = append(errorFiles, &fileInfo)
+					bar.Abort(false)
+					bar.SetPriority(math.MaxInt - int(c) - len(fileList))
 				} else {
-					bar.Set(100)
-					bar.AppendFunc(func(b *uiprogress.Bar) string {
-						return "SUCCESS"
-					})
+					if !bar.Completed() {
+						bar.SetCurrent(100)
+					}
+					bar.SetPriority(int(c))
 					break
 				}
 			}
 		}()
 	}
 
+	p.Wait()
 	wg.Wait()
 
 	if len(errorFiles) > 0 {
-		uiprogress.Stop()
 		fmt.Println("the following files upload failed, please try again:")
 		for _, v := range errorFiles {
 			fmt.Println(v.FileName)
@@ -125,25 +147,39 @@ func Upload_r2(clictx *cli.Context) error {
 
 	//upload config
 	localFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
-	bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
-	bar.Set(0)
-	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return fmt.Sprintf(" %s ", file_config.FILES_CONFIG_JSON_NAME)
-	})
+	// bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
+	// bar.Set(0)
+	// bar.PrependFunc(func(b *uiprogress.Bar) string {
+	// 	return fmt.Sprintf(" %s ", file_config.FILES_CONFIG_JSON_NAME)
+	// })
+	u_p:=mpb.New(mpb.WithAutoRefresh())
+	bar :=u_p.New(int64(100),
+		mpb.BarStyle(),
+		mpb.PrependDecorators(
+			// simple name decorator
+			decor.Name(fmt.Sprintf(" %s ", file_config.FILES_CONFIG_JSON_NAME)),
+			// decor.DSyncWidth bit enables column width synchronization
+			decor.Percentage(decor.WCSyncSpace),
+		),
+		mpb.AppendDecorators(
+			decor.OnComplete(
+				decor.Elapsed(decor.ET_STYLE_GO), "SUCCESS ",
+			),
+			decor.OnAbort(
+				decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
+			),
+		),
+	)
 
 	err = uploader_r2.UploadFile(client, bucketName, additional_path, file_config.FILES_CONFIG_JSON_NAME, localFilePath, "", bar)
+	p.Wait()
 	if err != nil {
-		bar.AppendFunc(func(b *uiprogress.Bar) string {
-			return "FAILED"
-		})
-		uiprogress.Stop()
+		bar.Abort(false)
 		fmt.Println("upload json file error")
 	} else {
-		bar.Set(100)
-		bar.AppendFunc(func(b *uiprogress.Bar) string {
-			return "SUCCESS"
-		})
-		uiprogress.Stop()
+		if !bar.Completed() {
+			bar.SetCurrent(100)
+		}
 		fmt.Println("upload job finish")
 	}
 

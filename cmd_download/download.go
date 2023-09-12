@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,7 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gosuri/uiprogress"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
+
 	"github.com/meson-network/bsc-data-file-utils/src/common/custom_reader"
 	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/urfave/cli/v2"
@@ -107,31 +110,47 @@ func Download(clictx *cli.Context) error {
 	}
 	dFile.Close()
 
-	uiprogress.Start()
-
 	errorFiles := []*file_config.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
 	var wg sync.WaitGroup
+	p := mpb.New(mpb.WithWaitGroup(&wg), mpb.WithAutoRefresh())
 	wg.Add(len(config.ChunkedFileList))
 	counter := int64(0)
 	for _, v := range config.ChunkedFileList {
 		chunkInfo := v
 		threadChan <- struct{}{}
+
+		c := atomic.AddInt64(&counter, 1)
+		bar := p.AddBar(int64(100),
+			mpb.BarFillerClearOnComplete(),
+			mpb.PrependDecorators(
+				// simple name decorator
+				decor.Name(fmt.Sprintf(" %d / %d %s ", c, len(config.ChunkedFileList), chunkInfo.FileName)),
+				// decor.DSyncWidth bit enables column width synchronization
+				decor.Percentage(decor.WCSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.OnComplete(
+					decor.Elapsed(decor.ET_STYLE_GO), "SUCCESS ",
+				),
+				decor.OnAbort(
+					decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
+				),
+			),
+		)
+		bar.SetPriority(int(c))
+
 		go func() {
 			defer func() {
 				<-threadChan
 				wg.Done()
 			}()
 
-			c := atomic.AddInt64(&counter, 1)
-			bar := uiprogress.AddBar(100).AppendCompleted().PrependElapsed()
-			bar.PrependFunc(func(b *uiprogress.Bar) string {
-				return fmt.Sprintf(" %d / %d %s ", c, len(config.ChunkedFileList), chunkInfo.FileName)
-			})
+			bar.SetPriority(math.MaxInt - int(c))
 
 			// try some times if download failed
 			for try := 0; try < retry_times; try++ {
-				bar.Set(0)
+				bar.SetCurrent(0)
 
 				downloadUrl := endPoint + "/" + chunkInfo.FileName
 				err := downloadPart(downloadUrl, downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
@@ -140,25 +159,23 @@ func Download(clictx *cli.Context) error {
 						time.Sleep(3 * time.Second)
 						continue
 					}
-					bar.AppendFunc(func(b *uiprogress.Bar) string {
-						return "FAILED"
-					})
 					errorFilesLock.Lock()
 					defer errorFilesLock.Unlock()
 					errorFiles = append(errorFiles, &chunkInfo)
+					bar.Abort(false)
+					bar.SetPriority(math.MaxInt - int(c) - len(config.ChunkedFileList))
 				} else {
-					bar.Set(100)
-					bar.AppendFunc(func(b *uiprogress.Bar) string {
-						return "SUCCESS"
-					})
+					if !bar.Completed() {
+						bar.SetCurrent(100)
+					}
+					bar.SetPriority(int(c))
 					break
 				}
 			}
 		}()
 	}
-
+	p.Wait()
 	wg.Wait()
-	uiprogress.Stop()
 	if len(errorFiles) > 0 {
 
 		fmt.Println("the following files download failed, please try again:")
@@ -178,7 +195,7 @@ func Download(clictx *cli.Context) error {
 	return nil
 }
 
-func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, chunkOffset int64, chunkMd5 string, bar *uiprogress.Bar) error {
+func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, chunkOffset int64, chunkMd5 string, bar *mpb.Bar) error {
 	// read local md5
 	file, err := os.OpenFile(downloadFilePath, os.O_RDWR, os.ModePerm)
 	if err != nil {
