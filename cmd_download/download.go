@@ -122,8 +122,8 @@ func Download(clictx *cli.Context) error {
 	downloadingFileName := config.RawFile.FileName + ".downloading"
 	downloadingFilePath := filepath.Join("./", downloadingFileName)
 
-	finishedJson:="."+config.RawFile.FileName + ".downloaded"
-	finishedJsonPath:= filepath.Join("./", finishedJson)
+	finishedJson := "." + config.RawFile.FileName + ".downloaded"
+	finishedJsonPath := filepath.Join("./", finishedJson)
 
 	// continue not finish download job
 	if noResume {
@@ -131,9 +131,9 @@ func Download(clictx *cli.Context) error {
 		os.Remove(finishedJsonPath)
 	}
 
-	finishedFiles:=NewFinishedFiles()
-	err=finishedFiles.ReadFinishFileList(finishedJsonPath)
-	if err!=nil{
+	finishedFiles := NewFinishedFiles()
+	err = finishedFiles.ReadFinishFileList(finishedJsonPath)
+	if err != nil {
 		fmt.Println("[ERROR] finished job read error")
 		return err
 	}
@@ -195,7 +195,7 @@ func Download(clictx *cli.Context) error {
 			bar.SetPriority(math.MaxInt - len(config.ChunkedFileList) + int(c))
 
 			// if already downloaded, skip it
-			if finishedFiles.IsFinished(chunkInfo.FileName){
+			if finishedFiles.IsFinished(chunkInfo.FileName) {
 				if !bar.Completed() {
 					bar.SetCurrent(100)
 				}
@@ -235,7 +235,7 @@ func Download(clictx *cli.Context) error {
 	}
 	p.Wait()
 	wg.Wait()
-	
+
 	finishedFiles.Close()
 
 	if len(errorFiles) > 0 {
@@ -315,6 +315,18 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 		Bar:    bar,
 	}
 
+	copyContent(target,reader)
+
+	md5Str := hex.EncodeToString(h.Sum(nil))
+	if md5Str == chunkMd5 {
+		return nil
+	}
+
+	return errors.New("md5 not equal")
+
+}
+
+func copyContent(target io.Writer, reader io.Reader) {
 	// need check download speed
 	buff := make([]byte, 32*1024)
 	written := 0
@@ -331,17 +343,17 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 					written += nw
 				}
 				if ew != nil {
-					err = ew
+					// err = ew
 					break
 				}
 				if nr != nw {
-					err = io.ErrShortWrite
+					// err = io.ErrShortWrite
 					break
 				}
 			}
 			if er != nil {
 				if er != io.EOF {
-					err = er
+					// err = er
 				}
 				break
 			}
@@ -371,18 +383,4 @@ outLoop:
 			break
 		}
 	}
-
-	// _, err = io.CopyN(target, reader, chunkSize)
-	// if err != nil {
-	// 	fmt.Println("read body err:", err)
-	// 	return err
-	// }
-
-	md5Str := hex.EncodeToString(h.Sum(nil))
-	if md5Str == chunkMd5 {
-		return nil
-	}
-
-	return errors.New("md5 not equal")
-
 }
