@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const default_retry_times = 3
+const default_retry_times = 5
 const default_thread = 5
 
 func Download(clictx *cli.Context) error {
@@ -33,6 +34,7 @@ func Download(clictx *cli.Context) error {
 	jsonConfigAddress := clictx.String("file_config")
 	thread := clictx.Int("thread")
 	retry_times := clictx.Int("retry_times")
+	noResume := clictx.Bool("no_resume")
 
 	if jsonConfigAddress == "" {
 		fmt.Println("[ERROR] json config error, please input correct address or file path")
@@ -119,6 +121,24 @@ func Download(clictx *cli.Context) error {
 
 	downloadingFileName := config.RawFile.FileName + ".downloading"
 	downloadingFilePath := filepath.Join("./", downloadingFileName)
+
+	finishedJson:="."+config.RawFile.FileName + ".downloaded"
+	finishedJsonPath:= filepath.Join("./", finishedJson)
+
+	// continue not finish download job
+	if noResume {
+		os.Remove(downloadingFilePath)
+		os.Remove(finishedJsonPath)
+	}
+
+	finishedFiles:=NewFinishedFiles()
+	err=finishedFiles.ReadFinishFileList(finishedJsonPath)
+	if err!=nil{
+		fmt.Println("[ERROR] finished job read error")
+		return err
+	}
+	defer finishedFiles.Close()
+
 	dFile, err := os.OpenFile(downloadingFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		fmt.Println("[ERROR] open file err:", err.Error())
@@ -147,6 +167,7 @@ func Download(clictx *cli.Context) error {
 
 		c := atomic.AddInt64(&counter, 1)
 		bar := p.AddBar(int64(100),
+			mpb.BarRemoveOnComplete(),
 			mpb.BarFillerClearOnComplete(),
 			mpb.PrependDecorators(
 				// simple name decorator
@@ -173,6 +194,15 @@ func Download(clictx *cli.Context) error {
 
 			bar.SetPriority(math.MaxInt - len(config.ChunkedFileList) + int(c))
 
+			// if already downloaded, skip it
+			if finishedFiles.IsFinished(chunkInfo.FileName){
+				if !bar.Completed() {
+					bar.SetCurrent(100)
+				}
+				bar.SetPriority(int(c))
+				return
+			}
+
 			// try some times if download failed
 			for try := 0; try < retry_times; try++ {
 				bar.SetCurrent(0)
@@ -197,6 +227,7 @@ func Download(clictx *cli.Context) error {
 						bar.SetCurrent(100)
 					}
 					bar.SetPriority(int(c))
+					finishedFiles.DownloadFinish(chunkInfo.FileName)
 					break
 				}
 			}
@@ -204,6 +235,9 @@ func Download(clictx *cli.Context) error {
 	}
 	p.Wait()
 	wg.Wait()
+	
+	finishedFiles.Close()
+
 	if len(errorFiles) > 0 {
 
 		fmt.Println("[ERROR] the following files download failed, please try again:")
@@ -218,6 +252,7 @@ func Download(clictx *cli.Context) error {
 		fmt.Println("[ERROR] rename download file err:", err.Error())
 		return err
 	}
+	os.Remove(finishedJsonPath)
 
 	fmt.Println("[INFO] download finish")
 
@@ -248,7 +283,19 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 	}
 
 	// download
-	resp, err := http.Get(downloadUrl)
+	client := &http.Client{
+		Transport: &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				conn, err := net.DialTimeout(network, addr, time.Second*7)
+				if err != nil {
+					return nil, err
+				}
+				return conn, nil
+			},
+			ResponseHeaderTimeout: time.Second * 7,
+		},
+	}
+	resp, err := client.Get(downloadUrl)
 	if err != nil {
 		return err
 	}
@@ -268,11 +315,69 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 		Bar:    bar,
 	}
 
-	_, err = io.CopyN(target, reader, chunkSize)
-	if err != nil {
-		fmt.Println("read body err:", err)
-		return err
+	// need check download speed
+	buff := make([]byte, 32*1024)
+	written := 0
+	finishChan := make(chan struct{})
+	go func() {
+		defer func() {
+			finishChan <- struct{}{}
+		}()
+		for {
+			nr, er := reader.Read(buff)
+			if nr > 0 {
+				nw, ew := target.Write(buff[0:nr])
+				if nw > 0 {
+					written += nw
+				}
+				if ew != nil {
+					err = ew
+					break
+				}
+				if nr != nw {
+					err = io.ErrShortWrite
+					break
+				}
+			}
+			if er != nil {
+				if er != io.EOF {
+					err = er
+				}
+				break
+			}
+		}
+	}()
+
+	spaceTime := time.Second * 10
+	ticker := time.NewTicker(spaceTime)
+	defer ticker.Stop()
+	lastWtn := 0
+	stop := false
+
+outLoop:
+	for {
+		select {
+		case <-finishChan:
+			break outLoop
+		case <-ticker.C:
+			// if no data transfer in 10 seconds
+			if written-lastWtn == 0 {
+				stop = true
+				break
+			}
+			lastWtn = written
+		}
+		if stop {
+			break
+		}
 	}
+
+	// _, err = io.CopyN(target, reader, chunkSize)
+	// if err != nil {
+	// 	fmt.Println("read body err:", err)
+	// 	return err
+	// }
+
 	md5Str := hex.EncodeToString(h.Sum(nil))
 	if md5Str == chunkMd5 {
 		return nil

@@ -19,7 +19,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const default_retry_times = 3
+const default_retry_times = 5
 const default_thread = 5
 
 func Upload_r2(clictx *cli.Context) error {
@@ -48,19 +48,19 @@ func Upload_r2(clictx *cli.Context) error {
 	configFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
 	jsonContent, err := os.ReadFile(configFilePath)
 	if err != nil {
-		fmt.Println("[ERROR] read file config err:",err)
+		fmt.Println("[ERROR] read file config err:", err)
 		return err
 	}
 	fileConfig := file_config.FileConfig{}
 	err = json.Unmarshal(jsonContent, &fileConfig)
 	if err != nil {
-		fmt.Println("[ERROR] unmarshal file config err:",err)
+		fmt.Println("[ERROR] unmarshal file config err:", err)
 		return err
 	}
 
 	client, err := uploader_r2.GenR2Client(accountId, accessKeyId, accessKeySecret)
 	if err != nil {
-		fmt.Println("[ERROR] gen r2 client err:",err)
+		fmt.Println("[ERROR] gen r2 client err:", err)
 		return err
 	}
 
@@ -79,6 +79,7 @@ func Upload_r2(clictx *cli.Context) error {
 
 		c := atomic.AddInt64(&counter, 1)
 		bar := p.AddBar(int64(100),
+			mpb.BarRemoveOnComplete(),
 			mpb.BarFillerClearOnComplete(),
 			mpb.PrependDecorators(
 				// simple name decorator
@@ -103,7 +104,7 @@ func Upload_r2(clictx *cli.Context) error {
 				wg.Done()
 			}()
 
-			bar.SetPriority(math.MaxInt-len(fileList) + int(c))
+			bar.SetPriority(math.MaxInt - len(fileList) + int(c))
 
 			// try some times if upload failed
 			for try := 0; try < retry_times; try++ {
@@ -147,8 +148,8 @@ func Upload_r2(clictx *cli.Context) error {
 
 	//upload config
 	localFilePath := filepath.Join(originDir, file_config.FILES_CONFIG_JSON_NAME)
-	u_p:=mpb.New(mpb.WithAutoRefresh())
-	bar :=u_p.New(int64(100),
+	u_p := mpb.New(mpb.WithAutoRefresh())
+	bar := u_p.New(int64(100),
 		mpb.BarStyle(),
 		mpb.PrependDecorators(
 			// simple name decorator

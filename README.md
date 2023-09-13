@@ -140,7 +140,7 @@ param description:
     --access_key_id     // <required> r2 access key id
     --access_key_secret // <required> r2 access key secret
     --thread            // <optional> thread quantity. default is 5
-    --retry_times       // <optional> retry times limit when some file upload failed. default is 3
+    --retry_times       // <optional> retry times limit when some file upload failed. default is 5
 ```
 
 ## download file
@@ -151,6 +151,7 @@ To download files, you need to provide 'files.json,' which is typically the file
  ./bsc-data-file-utils download \
     --file_config=<json file url> \
     --thread=<thread quantity> \
+    --no_resume=<true or false> \
     --retry_times=<retry times>
 ```
 
@@ -159,7 +160,8 @@ param description:
 ```text
     --file_config   // <required> config file url
     --thread        // <optional> thread quantity. default is 5
-    --retry_times   // <optional> retry times limit when some file download failed. default is 3
+    --no_resume     // <optional> default is false, if set true, it will re-download file without resume
+    --retry_times   // <optional> retry times limit when some file download failed. default is 5
 ```
 
 ## file config struct
