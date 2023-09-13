@@ -28,6 +28,7 @@ import (
 
 const default_retry_times = 5
 const default_thread = 5
+const default_request_timeout_sec = 7
 
 func Download(clictx *cli.Context) error {
 
@@ -286,13 +287,13 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
-				conn, err := net.DialTimeout(network, addr, time.Second*7)
+				conn, err := net.DialTimeout(network, addr, time.Second*default_request_timeout_sec)
 				if err != nil {
 					return nil, err
 				}
 				return conn, nil
 			},
-			ResponseHeaderTimeout: time.Second * 7,
+			ResponseHeaderTimeout: time.Second * default_request_timeout_sec,
 		},
 	}
 	resp, err := client.Get(downloadUrl)
@@ -315,7 +316,7 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 		Bar:    bar,
 	}
 
-	copyContent(target,reader)
+	copyContent(target, reader)
 
 	md5Str := hex.EncodeToString(h.Sum(nil))
 	if md5Str == chunkMd5 {
