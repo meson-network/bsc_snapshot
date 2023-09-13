@@ -16,6 +16,8 @@ split a large file and save to dest dir
     --thread=<thread quantity>
 ```
 
+param description:
+
 ```text
     --file   // <required> file path
     --size   // <required> each chunk size ex. 200m 
@@ -37,6 +39,8 @@ add download endpoint
     --endpoint=<endpoint url>
 ```
 
+param description:
+
 ```text
     --config_path   // <required> config file path
     --endpoint      // <required> url of endpoint to add, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
@@ -51,6 +55,8 @@ remove download endpoint
     --config_path=<config file path> \
     --endpoint=<endpoint url>
 ```
+
+param description:
 
 ```text
     --config_path   // <required> config file path
@@ -67,6 +73,8 @@ set download endpoint, overwrite exist endpoints
     --endpoint=<endpoint url>
 ```
 
+param description:
+
 ```text
     --config_path   // <required> config file path
     --endpoint      // <required> url of endpoint to set, overwrite exist endpoints, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
@@ -81,6 +89,8 @@ remove all endpoint
     --config_path=<config file path> \
 ```
 
+param description:
+
 ```text
     --config_path   // <required> config file path
 ```
@@ -93,6 +103,8 @@ output exist endpoints
  ./bsc-data-file-utils endpoint remove \
     --config_path=<config file path> \
 ```
+
+param description:
 
 ```text
     --config_path   // <required> config file path
@@ -118,6 +130,8 @@ upload to cloudflare R2 storage
     --retry_times=<retry times>
 ```
 
+param description:
+
 ```text
     --dir               // <required> dir path to upload
     --bucket_name       // <required> bucket name in r2
@@ -139,6 +153,8 @@ To download files, you need to provide 'files.json,' which is typically the file
     --thread=<thread quantity> \
     --retry_times=<retry times>
 ```
+
+param description:
 
 ```text
     --file_config   // <required> config file url
