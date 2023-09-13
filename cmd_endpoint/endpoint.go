@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/urfave/cli/v2"
@@ -15,25 +14,25 @@ func AddEndpoint(clictx *cli.Context) error {
 	configPath, endpoints := readParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
-		fmt.Println("[ERROR] read config error:",err.Error())
+		fmt.Println("[ERROR] read config error:", err.Error())
 		return err
 	}
-	if len(endpoints)==0{
+	if len(endpoints) == 0 {
 		fmt.Println("[ERROR] please input endpoint with param -e=<endpoint address>")
 		return errors.New("endpoints not find")
 	}
 
-	f_ep, err := formatEndpoints(endpoints)
+	f_ep, err := file_config.FormatEndpoints(endpoints)
 	if err != nil {
-		fmt.Println("[ERROR]",err.Error())
+		fmt.Println("[ERROR]", err.Error())
 		return err
 	}
 
 	addEndpoint(config, f_ep)
 	err = saveFileConfig(config, configPath)
 	if err != nil {
-		fmt.Println("[ERROR] save config error:",err.Error())
-	}else{
+		fmt.Println("[ERROR] save config error:", err.Error())
+	} else {
 		fmt.Println("[INFO] config saved")
 	}
 	return err
@@ -43,17 +42,17 @@ func RemoveEndpoint(clictx *cli.Context) error {
 	configPath, endpoints := readParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
-		fmt.Println("[ERROR] read config error:",err.Error())
+		fmt.Println("[ERROR] read config error:", err.Error())
 		return err
 	}
-	if len(endpoints)==0{
+	if len(endpoints) == 0 {
 		fmt.Println("[ERROR] please input endpoint with param -e=<endpoint address>")
 		return errors.New("endpoints not find")
 	}
 
-	f_ep, err := formatEndpoints(endpoints)
+	f_ep, err := file_config.FormatEndpoints(endpoints)
 	if err != nil {
-		fmt.Println("[ERROR]",err.Error())
+		fmt.Println("[ERROR]", err.Error())
 		return err
 	}
 
@@ -61,8 +60,8 @@ func RemoveEndpoint(clictx *cli.Context) error {
 
 	err = saveFileConfig(config, configPath)
 	if err != nil {
-		fmt.Println("[ERROR] save config error:",err.Error())
-	}else{
+		fmt.Println("[ERROR] save config error:", err.Error())
+	} else {
 		fmt.Println("[INFO] config saved")
 	}
 	return err
@@ -72,16 +71,16 @@ func SetEndpoint(clictx *cli.Context) error {
 	configPath, endpoints := readParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
-		fmt.Println("[ERROR] read config error:",err.Error())
+		fmt.Println("[ERROR] read config error:", err.Error())
 		return err
 	}
 
-	f_ep, err := formatEndpoints(endpoints)
+	f_ep, err := file_config.FormatEndpoints(endpoints)
 	if err != nil {
-		fmt.Println("[ERROR]",err.Error())
+		fmt.Println("[ERROR]", err.Error())
 		return err
 	}
-	if len(endpoints)==0{
+	if len(endpoints) == 0 {
 		fmt.Println("[ERROR] please input endpoint with param -e=<endpoint address>")
 		return errors.New("endpoints not find")
 	}
@@ -90,8 +89,8 @@ func SetEndpoint(clictx *cli.Context) error {
 
 	err = saveFileConfig(config, configPath)
 	if err != nil {
-		fmt.Println("[ERROR] save config error:",err.Error())
-	}else{
+		fmt.Println("[ERROR] save config error:", err.Error())
+	} else {
 		fmt.Println("[INFO] config saved")
 	}
 	return err
@@ -101,15 +100,15 @@ func ClearEndpoint(clictx *cli.Context) error {
 	configPath, _ := readParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
-		fmt.Println("[ERROR] read config error:",err.Error())
+		fmt.Println("[ERROR] read config error:", err.Error())
 		return err
 	}
 
 	clearEndpoint(config)
 	err = saveFileConfig(config, configPath)
 	if err != nil {
-		fmt.Println("[ERROR] save config error:",err.Error())
-	}else{
+		fmt.Println("[ERROR] save config error:", err.Error())
+	} else {
 		fmt.Println("[INFO] config saved")
 	}
 	return err
@@ -119,13 +118,13 @@ func PrintEndpoint(clictx *cli.Context) error {
 	configPath, _ := readParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
-		fmt.Println("[ERROR] read config error:",err.Error())
+		fmt.Println("[ERROR] read config error:", err.Error())
 		return err
 	}
 
 	fmt.Println("current endpoint:")
-	for _,v:=range config.EndPoint{
-		fmt.Println("\t",v)
+	for _, v := range config.EndPoint {
+		fmt.Println("\t", v)
 	}
 
 	return nil
@@ -158,20 +157,6 @@ func saveFileConfig(c *file_config.FileConfig, savePath string) error {
 	}
 
 	return nil
-}
-
-func formatEndpoints(endpoints []string) ([]string, error) {
-	for i := range endpoints {
-		endpoints[i] = strings.TrimSpace(endpoints[i])
-		if !strings.HasPrefix(endpoints[i], "http") {
-			return nil, errors.New("endpoint format error")
-		}
-		for strings.HasSuffix(endpoints[i], "/"){
-			endpoints[i] = strings.TrimSuffix(endpoints[i], "/")
-		}
-	}
-
-	return endpoints, nil
 }
 
 func addEndpoint(c *file_config.FileConfig, endpoints []string) {

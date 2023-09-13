@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -83,8 +84,9 @@ func Download(clictx *cli.Context) error {
 	}
 
 	// check endpoint
-	endPoint := ""
-	if len(config.EndPoint) == 0 {
+	endPoints := []string{}
+	existEndPoints,err:=file_config.FormatEndpoints(config.EndPoint)
+	if len(existEndPoints) == 0 {
 		// if no end point info in json, default use json config download path
 		if strings.HasPrefix(jsonConfigAddress, "http") {
 			i := strings.LastIndex(jsonConfigAddress, "/")
@@ -93,13 +95,13 @@ func Download(clictx *cli.Context) error {
 				return errors.New("download endpoint error")
 			}
 			fmt.Println("[INFO] use some endpoint with json config file")
-			endPoint = jsonConfigAddress[:i]
+			endPoints = append(endPoints, jsonConfigAddress[:i]) 
 		} else {
 			fmt.Println("[ERROR] download endpoint not exist")
 			return errors.New("download endpoint not exist")
 		}
 	} else {
-		endPoint = config.EndPoint[0]
+		endPoints = existEndPoints
 	}
 
 	// gen raw file
@@ -166,13 +168,16 @@ func Download(clictx *cli.Context) error {
 				wg.Done()
 			}()
 
-			bar.SetPriority(math.MaxInt - int(c))
+			bar.SetPriority(math.MaxInt-len(config.ChunkedFileList) + int(c))
 
 			// try some times if download failed
 			for try := 0; try < retry_times; try++ {
 				bar.SetCurrent(0)
 
-				downloadUrl := endPoint + "/" + chunkInfo.FileName
+				//rand pick endpoint
+				currentEndpoint:=endPoints[rand.Intn(len(endPoints))]
+				downloadUrl := currentEndpoint + "/" + chunkInfo.FileName
+				
 				err := downloadPart(downloadUrl, downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
 				if err != nil {
 					if try < retry_times-1 {

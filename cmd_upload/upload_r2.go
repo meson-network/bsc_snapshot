@@ -103,7 +103,7 @@ func Upload_r2(clictx *cli.Context) error {
 				wg.Done()
 			}()
 
-			bar.SetPriority(math.MaxInt - int(c))
+			bar.SetPriority(math.MaxInt-len(fileList) + int(c))
 
 			// try some times if upload failed
 			for try := 0; try < retry_times; try++ {
