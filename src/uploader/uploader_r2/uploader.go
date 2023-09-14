@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/meson-network/bsc-data-file-utils/src/common/custom_reader"
+	"github.com/meson-network/bsc-data-file-utils/src/custom_reader"
 	"github.com/vbauerster/mpb/v8"
 )
 

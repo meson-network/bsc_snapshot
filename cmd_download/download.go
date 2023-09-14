@@ -21,7 +21,7 @@ import (
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 
-	"github.com/meson-network/bsc-data-file-utils/src/common/custom_reader"
+	"github.com/meson-network/bsc-data-file-utils/src/custom_reader"
 	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/urfave/cli/v2"
 )

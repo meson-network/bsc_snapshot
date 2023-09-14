@@ -1,9 +1,12 @@
 package cmd_split
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -15,7 +18,6 @@ import (
 
 	"github.com/meson-network/bsc-data-file-utils/src/common/parse_size"
 	"github.com/meson-network/bsc-data-file-utils/src/file_config"
-	"github.com/meson-network/bsc-data-file-utils/src/split_file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -131,7 +133,7 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 				<-threadChan
 				wg.Done()
 			}()
-			name, fileSize, md5Str, err := split_file.GenFileChunk(fileInfo.Name(), fileInfo.Size(), originFilePath, index, chunkSize, destDir)
+			name, fileSize, md5Str, err := genFileChunk(fileInfo.Name(), fileInfo.Size(), originFilePath, index, chunkSize, destDir)
 			if err != nil {
 				fmt.Println("err:", err)
 				errChan <- err
@@ -172,4 +174,41 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 	fmt.Println("[INFO] split finish")
 
 	return nil
+}
+
+func genFileChunk(originFileName string, originFileSize int64, originFilePath string, chunkNum int64, chunkSize int64, destDir string) (name string, size int64, md5Str string, err error) {
+	fi, err := os.OpenFile(originFilePath, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return "", 0, "", err
+	}
+	defer fi.Close()
+
+	_, err = fi.Seek((chunkNum-1)*chunkSize, 0)
+	if err != nil {
+		return "", 0, "", err
+	}
+	partSize := chunkSize
+	if partSize > int64(originFileSize-(chunkNum-1)*chunkSize) {
+		partSize = originFileSize - (chunkNum-1)*chunkSize
+	}
+
+	chunkFileName := fmt.Sprintf("%s.%d", originFileName, chunkNum)
+	chunkFilePath := filepath.Join(destDir, chunkFileName)
+
+	df, err := os.OpenFile(chunkFilePath, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return "", 0, "", err
+	}
+	defer df.Close()
+
+	h := md5.New()
+	target := io.MultiWriter(df, h)
+
+	_, err = io.CopyN(target, fi, partSize)
+	if err != nil {
+		return "", 0, "", err
+	}
+	md5Str = hex.EncodeToString(h.Sum(nil))
+
+	return chunkFileName, partSize, md5Str, nil
 }
