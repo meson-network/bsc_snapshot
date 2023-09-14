@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -54,9 +55,8 @@ func UploadFile(client *s3.Client, bucketName string, additional_path string, fi
 			remoteMd5 := *info.ETag
 			localMd5 := "\"" + localFileMd5 + "\""
 
-			if remoteMd5 == localMd5 {
+			if strings.EqualFold(remoteMd5, localMd5) {
 				// if same file, upload success
-				// bar.PrintBar(100)
 				return nil
 			}
 		}
