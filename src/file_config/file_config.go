@@ -1,6 +1,6 @@
 package file_config
 
-const FILES_CONFIG_JSON_NAME = "files.json"
+const DEFAULT_CONFIG_NAME = "files.json"
 
 type FileConfig struct {
 	RawFile         RawFileInfo       `json:"raw_file"`

@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/urfave/cli/v2"
+
+	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 )
 
 func AddEndpoint(clictx *cli.Context) error {
-	configPath, endpoints := readParam(clictx)
+	configPath, endpoints := ReadParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
 		fmt.Println("[ERROR] read config error:", err.Error())
@@ -39,7 +40,7 @@ func AddEndpoint(clictx *cli.Context) error {
 }
 
 func RemoveEndpoint(clictx *cli.Context) error {
-	configPath, endpoints := readParam(clictx)
+	configPath, endpoints := ReadParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
 		fmt.Println("[ERROR] read config error:", err.Error())
@@ -68,7 +69,7 @@ func RemoveEndpoint(clictx *cli.Context) error {
 }
 
 func SetEndpoint(clictx *cli.Context) error {
-	configPath, endpoints := readParam(clictx)
+	configPath, endpoints := ReadParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
 		fmt.Println("[ERROR] read config error:", err.Error())
@@ -97,7 +98,7 @@ func SetEndpoint(clictx *cli.Context) error {
 }
 
 func ClearEndpoint(clictx *cli.Context) error {
-	configPath, _ := readParam(clictx)
+	configPath, _ := ReadParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
 		fmt.Println("[ERROR] read config error:", err.Error())
@@ -115,7 +116,7 @@ func ClearEndpoint(clictx *cli.Context) error {
 }
 
 func PrintEndpoint(clictx *cli.Context) error {
-	configPath, _ := readParam(clictx)
+	configPath, _ := ReadParam(clictx)
 	config, err := readFileConfig(configPath)
 	if err != nil {
 		fmt.Println("[ERROR] read config error:", err.Error())
