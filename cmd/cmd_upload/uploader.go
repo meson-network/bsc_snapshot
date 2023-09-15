@@ -3,7 +3,7 @@ package cmd_upload
 import (
 	"github.com/urfave/cli/v2"
 
-	"github.com/meson-network/bsc-snapshot/src/uploader"
+	"github.com/meson-network/bsc_snapshot/src/uploader"
 )
 
 func Uploader(clictx *cli.Context) error {

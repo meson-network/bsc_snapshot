@@ -18,8 +18,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/meson-network/bsc-snapshot/src/file_config"
-	"github.com/meson-network/bsc-snapshot/src/utils/parse_size"
+	"github.com/meson-network/bsc_snapshot/src/file_config"
+	"github.com/meson-network/bsc_snapshot/src/utils/parse_size"
 )
 
 const default_dest = "./dest"

@@ -47,4 +47,4 @@ user_conf/*/*
 
 **/*_test.go
 build/
-bsc-snapshot
+bsc_snapshot

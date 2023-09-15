@@ -1,4 +1,4 @@
-module github.com/meson-network/bsc-snapshot
+module github.com/meson-network/bsc_snapshot
 
 go 1.20
 

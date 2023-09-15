@@ -8,7 +8,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/meson-network/bsc-snapshot/src/file_config"
+	"github.com/meson-network/bsc_snapshot/src/file_config"
 )
 
 func AddEndpoint(clictx *cli.Context) error {

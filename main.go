@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/meson-network/bsc-snapshot/cmd"
+	"github.com/meson-network/bsc_snapshot/cmd"
 )
 
 func main() {

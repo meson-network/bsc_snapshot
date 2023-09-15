@@ -15,8 +15,8 @@ import (
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 
-	"github.com/meson-network/bsc-snapshot/src/file_config"
-	"github.com/meson-network/bsc-snapshot/src/uploader/uploader_r2"
+	"github.com/meson-network/bsc_snapshot/src/file_config"
+	"github.com/meson-network/bsc_snapshot/src/uploader/uploader_r2"
 )
 
 const (
