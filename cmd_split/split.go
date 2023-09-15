@@ -67,7 +67,7 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 			return errors.New("source file not exist")
 		}
 		fmt.Println("[ERROR] read source file err:", err.Error())
-		return errors.New("source file not exist")
+		return errors.New("source file error")
 	}
 
 	num := math.Ceil(float64(fileInfo.Size()) / float64(chunkSize))
@@ -118,8 +118,8 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 	errChan := make(chan error)
 
 	fmt.Println("[INFO] start to split file", "chunk size:", chunkSize, "byte")
-	var i int64 = 1
-	for ; i <= int64(num); i++ {
+
+	for i := int64(1); i <= int64(num); i++ {
 		index := i
 
 		select {
