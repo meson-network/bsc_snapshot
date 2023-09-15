@@ -1,36 +1,49 @@
-# bsc_snapshot
+# BSC Snapshot
+
+[![CodeFactor](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot/badge)](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot)
+[![GitHub](https://img.shields.io/github/license/meson-network/bsc_snapshot)](https://github.com/meson-network/bsc_snapshot/blob/main/LICENSE)
+![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/NetworkMeson)
+<a href="https://discord.com/invite/z6YfSHDkmS">
+    <img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" />
+</a>
+![GitHub forks](https://img.shields.io/github/forks/meson-network/bsc_snapshot)
+![GitHub issues](https://img.shields.io/github/issues/meson-network/bsc_snapshot)
+![GitHub all releases](https://img.shields.io/github/downloads/meson-network/bsc_snapshot/total)
 
 This is a tool for splitting, uploading, and downloading large files, allowing users to easily split files and achieve multi-threaded uploads and downloads, significantly improving the speed of uploading and downloading large files.
 
 Comparison with other download utils:
 
-wget: [=========>------------------------]  35 MB/s <br>
-aria2c: [=====================>------------]  350 MB/s <br>
-bsc_snapshot:[=================================>]  500 MB/s
+|  Util   | Speed  |
+|  ----  | ----  |
+| wget  | [#####--------------------------------------------------------]  35 MB/s |
+| aria2c  | [#########################-----------------------------]  350 MB/s |
+| bsc_snapshot  | [###############################################]  500 MB/s|
+
 
 ## How to use
 
-1. download this util
+1. Download this util
 
-* linux 64bit
+* Linux 64bit
   
 ```text
 wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_linux_amd64" 
 ```
 
-* mac 64bit
+* Mac 64bit
   
 ```text
 wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_darwin"
 ```
 
-* windows 64bit
+* Windows 64bit
   
 ```text
 https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot.exe
 ```
 
-2. start download
+2. Start download
 
 ```text
  ./bsc_snapshot download \
@@ -57,7 +70,7 @@ To download files, you need to provide 'files.json,' which is typically the file
 
 Splitting the file will divide it into specified sizes and save it to the designated folder. Additionally, a 'files.json' file will be generated in the target folder to store information about the source file and the split files, making it convenient for various operations such as uploading and downloading.
 
-#### split a large file to dest dir
+#### Split a large file to dest dir
 
 ```text
  ./bsc_snapshot split \
@@ -67,7 +80,7 @@ Splitting the file will divide it into specified sizes and save it to the design
     --thread=<thread quantity>
 ```
 
-param description:
+Param description:
 
 ```text
     --file   // <required> file path
@@ -76,7 +89,7 @@ param description:
     --thread // <optional> thread quantity. default = cpu quantity
 ```
 
-#### files.json struct
+#### files.json Struct
 
 ```golang
 type FileConfig struct {
@@ -104,7 +117,7 @@ The 'endpoint' information in the 'files.json' stores download endpoints, which 
 
 The endpoint needs to be specified to a specific directory where files are stored, for example, if a file's download address is `https://yourdomain.com/bucket_dir/file.1`, then the endpoint should be set to `https://yourdomain.com/bucket_dir`.
 
-#### add endpoints
+#### Add endpoints
 
 add download endpoint
 
@@ -121,7 +134,7 @@ param description:
     --endpoint      // <required> endpoint url to add, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
-#### remove endpoints
+#### Remove endpoints
 
 remove download endpoint
 
@@ -138,7 +151,7 @@ param description:
     --endpoint      // <required> url of endpoint to remove, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
-#### set endpoints
+#### Set endpoints
 
 set download endpoint, overwrite exist endpoints
 
@@ -155,7 +168,7 @@ param description:
     --endpoint      // <required> url of endpoint to set, overwrite exist endpoints, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
-#### clear all endpoints
+#### Clear all endpoints
 
 remove all endpoint
 
@@ -170,7 +183,7 @@ param description:
     --config_path   // <required> files.json path
 ```
 
-#### print exist endpoints
+#### Print exist endpoints
 
 output exist endpoints
 
@@ -189,7 +202,7 @@ param description:
 
 Upload the split files to storage. If the upload task is interrupted due to network or other reasons and needs to be resumed, typically, a comparison is made using MD5 for the files that have already been uploaded. Files with matching MD5 will not be re-uploaded.
 
-#### upload to cloudflare R2
+#### Upload to cloudflare R2
 
 To upload files to Cloudflare R2, first, you need to create a bucket on R2 and obtain the 'account id', 'access key id', 'access key secret'.
 
