@@ -7,7 +7,8 @@ This is a tool for splitting, uploading, and downloading large files, allowing u
 get util
 
 ```text
-wget <xxxxxx> // todo 
+linux 64bit: wget <xxxxxx> // todo 
+linux 32bit: wget <xxxxxx> // todo 
 ```
 
 start download
@@ -86,7 +87,7 @@ param description:
 set download endpoint, overwrite exist endpoints
 
 ```text
- ./bsc-data-file-utils endpoint remove \
+ ./bsc-data-file-utils endpoint set \
     --config_path=<config file path> \
     --endpoint=<endpoint url>
 ```
@@ -103,7 +104,7 @@ param description:
 remove all endpoint
 
 ```text
- ./bsc-data-file-utils endpoint remove \
+ ./bsc-data-file-utils endpoint clear \
     --config_path=<config file path> \
 ```
 
@@ -118,7 +119,7 @@ param description:
 output exist endpoints
 
 ```text
- ./bsc-data-file-utils endpoint remove \
+ ./bsc-data-file-utils endpoint print \
     --config_path=<config file path> \
 ```
 
