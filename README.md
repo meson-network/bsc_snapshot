@@ -7,8 +7,8 @@ This is a tool for splitting, uploading, and downloading large files, allowing u
 get util
 
 ```text
-linux 64bit: wget <xxxxxx> // todo 
-linux 32bit: wget <xxxxxx> // todo 
+linux 64bit: wget -O bcs-data-file-utils "<xxxxxx>" // todo 
+linux 32bit: wget -O bcs-data-file-utils "<xxxxxx>" // todo 
 ```
 
 start download
