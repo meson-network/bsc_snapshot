@@ -54,6 +54,7 @@ func Upload_r2(originDir string, thread int, bucketName string, additional_path 
 		client, bucketName, additional_path); err != nil {
 		return err
 	}
+
 	upload_config(originDir,
 		client, bucketName, additional_path)
 
@@ -66,6 +67,7 @@ func upload_file(originDir string, thread int, retryTimes int, fileConfig *model
 	fileList := fileConfig.ChunkedFileList
 	errorFiles := []*model.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
+
 	var wg sync.WaitGroup
 	progressBar := mpb.New(mpb.WithAutoRefresh())
 	counter := int64(0)
@@ -83,7 +85,8 @@ func upload_file(originDir string, thread int, retryTimes int, fileConfig *model
 			}()
 
 			c := atomic.AddInt64(&counter, 1)
-			bar := progressBar.AddBar(int64(100),
+			bar := progressBar.AddBar(
+				int64(100),
 				mpb.BarRemoveOnComplete(),
 				mpb.BarFillerClearOnComplete(),
 				mpb.PrependDecorators(
@@ -135,7 +138,6 @@ func upload_file(originDir string, thread int, retryTimes int, fileConfig *model
 			}
 		}()
 	}
-
 	progressBar.Wait()
 	wg.Wait()
 
@@ -151,12 +153,15 @@ func upload_file(originDir string, thread int, retryTimes int, fileConfig *model
 }
 
 func upload_config(originDir string, client *s3.Client, bucketName string, additional_path string) {
+
+	fileDir, fileName := originDir, model.DEFAULT_CONFIG_NAME
+
 	progressBar := mpb.New(mpb.WithAutoRefresh())
-	bar := progressBar.New(int64(100),
-		mpb.BarStyle(),
+	bar := progressBar.AddBar(
+		int64(100),
 		mpb.PrependDecorators(
 			// simple name decorator
-			decor.Name(fmt.Sprintf(" %s ", model.DEFAULT_CONFIG_NAME)),
+			decor.Name(fmt.Sprintf(" %s ", fileName)),
 			// decor.DSyncWidth bit enables column width synchronization
 			decor.Percentage(decor.WCSyncSpace),
 		),
@@ -170,9 +175,9 @@ func upload_config(originDir string, client *s3.Client, bucketName string, addit
 		),
 	)
 
-	uploadWorker := uploader_r2.NewUploadWorker(client, bucketName, additional_path, model.DEFAULT_CONFIG_NAME, "", bar)
+	uploadWorker := uploader_r2.NewUploadWorker(client, bucketName, additional_path, fileName, "", bar)
 
-	localFilePath := filepath.Join(originDir, model.DEFAULT_CONFIG_NAME)
+	localFilePath := filepath.Join(fileDir, fileName)
 	err := uploadWorker.UploadFile(localFilePath)
 	progressBar.Wait()
 	if err != nil {
