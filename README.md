@@ -23,18 +23,18 @@ Comparison with other download utils:
 
 ## How to use
 
-1. Download this util
+1. Download this util and grant run permissions
 
 * Linux 64bit
   
 ```text
-wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_linux_amd64" 
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_linux_amd64" && chmod +x ./bsc_snapshot
 ```
 
 * Mac 64bit
   
 ```text
-wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_darwin"
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_darwin" && chmod +x ./bsc_snapshot
 ```
 
 * Windows 64bit
