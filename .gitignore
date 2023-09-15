@@ -47,4 +47,3 @@ user_conf/*/*
 
 **/*_test.go
 build/
-bsc-data-file-utils
