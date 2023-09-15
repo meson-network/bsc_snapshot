@@ -13,7 +13,7 @@ import (
 
 	"github.com/vbauerster/mpb/v8"
 
-	"github.com/meson-network/bsc-data-file-utils/src/utils/custom_reader"
+	"github.com/meson-network/bsc-snapshot/src/utils/custom_reader"
 )
 
 type ChunkFetcher struct {

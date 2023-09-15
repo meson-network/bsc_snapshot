@@ -1,19 +1,14 @@
-module github.com/meson-network/bsc-data-file-utils
+module github.com/meson-network/bsc-snapshot
 
 go 1.20
 
-require (
-	github.com/fatih/color v1.13.0
-	github.com/imroc/req v0.3.2
-	github.com/urfave/cli/v2 v2.11.1
-)
+require github.com/urfave/cli/v2 v2.11.1
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.21.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.39
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.37
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.5
-	github.com/coreservice-io/utils v0.3.0
 	github.com/vbauerster/mpb/v8 v8.6.1
 )
 
@@ -35,8 +30,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.21.5 // indirect
 	github.com/aws/smithy-go v1.14.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
