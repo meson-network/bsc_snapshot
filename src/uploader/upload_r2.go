@@ -138,8 +138,9 @@ func upload_file(originDir string, thread int, retryTimes int, fileConfig *model
 			}
 		}()
 	}
-	progressBar.Wait()
+	// must wait wg first
 	wg.Wait()
+	progressBar.Wait()
 
 	if len(errorFiles) > 0 {
 		fmt.Println("[ERROR] the following files upload failed, please try again:")
@@ -179,6 +180,7 @@ func upload_config(originDir string, client *s3.Client, bucketName string, addit
 
 	localFilePath := filepath.Join(fileDir, fileName)
 	err := uploadWorker.UploadFile(localFilePath)
+
 	progressBar.Wait()
 	if err != nil {
 		bar.Abort(false)

@@ -186,8 +186,9 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 			}
 		}()
 	}
-	progressBar.Wait()
+	// must wait wg first
 	wg.Wait()
+	progressBar.Wait()
 
 	chunkFetchStat.Close()
 
