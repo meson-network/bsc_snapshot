@@ -15,19 +15,19 @@ bsc_snapshot:[=================================>]  500 MB/s
 * linux 64bit
   
 ```text
-wget -O bsc_snapshot "<xxxxxx>" 
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_linux_amd64" 
 ```
 
 * mac 64bit
   
 ```text
-wget -O bsc_snapshot "<xxxxxx>"
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot_darwin"
 ```
 
 * windows 64bit
   
 ```text
-https://
+https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.0/bsc_snapshot.exe
 ```
 
 2. start download
@@ -35,9 +35,7 @@ https://
 ```text
  ./bsc_snapshot download \
     --file_config=<files.json url> \
-    --thread=<thread quantity> \
-    --no_resume=<true or false> \
-    --retry_times=<retry times>
+    --thread=128
 ```
 
 param description:
