@@ -1,4 +1,4 @@
-package file_config
+package model
 
 const DEFAULT_CONFIG_NAME = "files.json"
 

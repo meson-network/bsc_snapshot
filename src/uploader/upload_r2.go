@@ -1,11 +1,9 @@
 package uploader
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -15,7 +13,8 @@ import (
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 
-	"github.com/meson-network/bsc_snapshot/src/file_config"
+	"github.com/meson-network/bsc_snapshot/src/config"
+	"github.com/meson-network/bsc_snapshot/src/model"
 	"github.com/meson-network/bsc_snapshot/src/uploader/uploader_r2"
 )
 
@@ -36,8 +35,8 @@ func Upload_r2(originDir string, thread int, bucketName string, additional_path 
 	}
 
 	// read json from originDir
-	configFilePath := filepath.Join(originDir, file_config.DEFAULT_CONFIG_NAME)
-	fileConfig, err := loadFileConfig(configFilePath)
+	configFilePath := filepath.Join(originDir, model.DEFAULT_CONFIG_NAME)
+	fileConfig, err := config.LoadFile4Upload(configFilePath)
 	if err != nil {
 		fmt.Println("[ERROR] ", err.Error())
 		return err
@@ -61,25 +60,11 @@ func Upload_r2(originDir string, thread int, bucketName string, additional_path 
 	return nil
 }
 
-func loadFileConfig(configFilePath string) (*file_config.FileConfig, error) {
-	jsonContent, err := os.ReadFile(configFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("read file config err: %s", err.Error())
-	}
-	fileConfig := &file_config.FileConfig{}
-	err = json.Unmarshal(jsonContent, fileConfig)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal file config err: %s", err.Error())
-	}
-
-	return fileConfig, nil
-}
-
-func upload_file(originDir string, thread int, retryTimes int, fileConfig *file_config.FileConfig,
+func upload_file(originDir string, thread int, retryTimes int, fileConfig *model.FileConfig,
 	client *s3.Client, bucketName string, additional_path string) error {
 
 	fileList := fileConfig.ChunkedFileList
-	errorFiles := []*file_config.ChunkedFileInfo{}
+	errorFiles := []*model.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
 	var wg sync.WaitGroup
 	progressBar := mpb.New(mpb.WithAutoRefresh())
@@ -171,7 +156,7 @@ func upload_config(originDir string, client *s3.Client, bucketName string, addit
 		mpb.BarStyle(),
 		mpb.PrependDecorators(
 			// simple name decorator
-			decor.Name(fmt.Sprintf(" %s ", file_config.DEFAULT_CONFIG_NAME)),
+			decor.Name(fmt.Sprintf(" %s ", model.DEFAULT_CONFIG_NAME)),
 			// decor.DSyncWidth bit enables column width synchronization
 			decor.Percentage(decor.WCSyncSpace),
 		),
@@ -185,9 +170,9 @@ func upload_config(originDir string, client *s3.Client, bucketName string, addit
 		),
 	)
 
-	uploadWorker := uploader_r2.NewUploadWorker(client, bucketName, additional_path, file_config.DEFAULT_CONFIG_NAME, "", bar)
+	uploadWorker := uploader_r2.NewUploadWorker(client, bucketName, additional_path, model.DEFAULT_CONFIG_NAME, "", bar)
 
-	localFilePath := filepath.Join(originDir, file_config.DEFAULT_CONFIG_NAME)
+	localFilePath := filepath.Join(originDir, model.DEFAULT_CONFIG_NAME)
 	err := uploadWorker.UploadFile(localFilePath)
 	progressBar.Wait()
 	if err != nil {

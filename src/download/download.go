@@ -1,16 +1,12 @@
 package download
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math"
 	"math/rand"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,7 +14,9 @@ import (
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 
-	"github.com/meson-network/bsc_snapshot/src/file_config"
+	"github.com/meson-network/bsc_snapshot/src/config"
+	"github.com/meson-network/bsc_snapshot/src/model"
+	"github.com/meson-network/bsc_snapshot/src/utils/file_config"
 )
 
 const (
@@ -27,8 +25,8 @@ const (
 	DEFAULT_REQUEST_TIMEOUT = time.Second * 7
 )
 
-func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool) error {
-	if jsonConfigAddress == "" {
+func Download(configFilePath string, thread int, retryNum int, noResume bool) error {
+	if configFilePath == "" {
 		fmt.Println("[ERROR] json config error, please input correct address or file path")
 		return errors.New("json config error")
 	}
@@ -39,13 +37,13 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 		retryNum = DEFAULT_RETRY_TIMES
 	}
 
-	config, err := loadFileConfig(jsonConfigAddress)
+	conf, err := config.LoadFile4Download(configFilePath)
 	if err != nil {
 		fmt.Println("[ERROR] ", err.Error())
 		return err
 	}
 
-	existEndPoints, err := file_config.FormatEndpoints(config.EndPoint)
+	existEndPoints, err := file_config.FormatEndpoints(conf.EndPoint)
 	if err != nil {
 		fmt.Println("[ERROR] json config endpoint format error")
 		return err
@@ -55,7 +53,7 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 	var endPoints []string
 	if len(existEndPoints) == 0 {
 		// if no end point info in json, default use json config download path
-		endPointsFromFile, err := parserEndPointFromFileConfig(jsonConfigAddress)
+		endPointsFromFile, err := config.ExtractEndPointFromConfig(configFilePath)
 		if err != nil {
 			fmt.Println("[ERROR] ", err.Error())
 			return err
@@ -68,17 +66,16 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 	}
 
 	// gen raw file
-	rawFilePath := filepath.Join("./", config.RawFile.FileName)
-
+	rawFilePath := filepath.Join("./", conf.RawFile.FileName)
 	if fileStat, _ := os.Stat(rawFilePath); fileStat != nil {
-		fmt.Println("[ERROR]", "<", config.RawFile.FileName, ">", "already exist")
+		fmt.Println("[ERROR]", "<", conf.RawFile.FileName, ">", "already exist")
 		return errors.New("file exist")
 	}
 
-	downloadingFileName := config.RawFile.FileName + ".downloading"
+	downloadingFileName := conf.RawFile.FileName + ".downloading"
 	downloadingFilePath := filepath.Join("./", downloadingFileName)
 
-	chunkMetaName := "." + config.RawFile.FileName + ".downloaded"
+	chunkMetaName := "." + conf.RawFile.FileName + ".downloaded"
 	chunkMetaPath := filepath.Join("./", chunkMetaName)
 
 	if noResume {
@@ -101,7 +98,7 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 		return err
 	}
 
-	if err := dFile.Truncate(config.RawFile.Size); err != nil {
+	if err := dFile.Truncate(conf.RawFile.Size); err != nil {
 		dFile.Close()
 		fmt.Println("[ERROR] handle file err:", err.Error())
 		return err
@@ -111,14 +108,14 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 	fmt.Println("[INFO] start download...")
 
 	threadChan := make(chan struct{}, thread)
-	errorFiles := []*file_config.ChunkedFileInfo{}
+	errorFiles := []*model.ChunkedFileInfo{}
 	var errorFilesLock sync.Mutex
 
 	var wg sync.WaitGroup
 	progressBar := mpb.New(mpb.WithAutoRefresh())
 
 	counter := int64(0)
-	for _, v := range config.ChunkedFileList {
+	for _, v := range conf.ChunkedFileList {
 		chunkInfo := v
 		if chunkFetchStat.IsDone(chunkInfo.FileName) {
 			// if already downloaded, skip it
@@ -140,7 +137,7 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 				mpb.BarFillerClearOnComplete(),
 				mpb.PrependDecorators(
 					// simple name decorator
-					decor.Name(fmt.Sprintf(" %d / %d %s ", c, len(config.ChunkedFileList), chunkInfo.FileName)),
+					decor.Name(fmt.Sprintf(" %d / %d %s ", c, len(conf.ChunkedFileList), chunkInfo.FileName)),
 					// decor.DSyncWidth bit enables column width synchronization
 					decor.Percentage(decor.WCSyncSpace),
 				),
@@ -154,7 +151,7 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 				),
 			)
 
-			bar.SetPriority(math.MaxInt - len(config.ChunkedFileList) + int(c))
+			bar.SetPriority(math.MaxInt - len(conf.ChunkedFileList) + int(c))
 
 			fetcher := NewChunkFetcher(downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
 
@@ -177,7 +174,7 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 					errorFilesLock.Unlock()
 
 					bar.Abort(false)
-					bar.SetPriority(math.MaxInt - int(c) - len(config.ChunkedFileList))
+					bar.SetPriority(math.MaxInt - int(c) - len(conf.ChunkedFileList))
 				} else {
 					if !bar.Completed() {
 						bar.SetCurrent(100)
@@ -212,52 +209,4 @@ func Download(jsonConfigAddress string, thread int, retryNum int, noResume bool)
 	fmt.Println("[INFO] download finish")
 
 	return nil
-}
-
-func loadFileConfig(jsonConfigAddress string) (*file_config.FileConfig, error) {
-	config := &file_config.FileConfig{}
-	if strings.HasPrefix(jsonConfigAddress, "http") {
-		// download json
-		client := &http.Client{Timeout: 20 * time.Second}
-		resp, err := client.Get(jsonConfigAddress)
-		if err != nil {
-			return nil, fmt.Errorf("get json config error: %s", err.Error())
-		}
-		defer resp.Body.Close()
-		content, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("get json config error: %s", err.Error())
-		}
-		err = json.Unmarshal(content, config)
-		if err != nil {
-			return nil, fmt.Errorf("json config unmarshal error: %s", err.Error())
-		}
-	} else {
-		// read json file
-		content, err := os.ReadFile(jsonConfigAddress)
-		if err != nil {
-			return nil, fmt.Errorf("read json config error: %s", err.Error())
-		}
-		err = json.Unmarshal(content, config)
-		if err != nil {
-			return nil, fmt.Errorf("json config unmarshal error: %s", err.Error())
-		}
-	}
-
-	return config, nil
-}
-
-func parserEndPointFromFileConfig(jsonConfigAddress string) ([]string, error) {
-	if strings.HasPrefix(jsonConfigAddress, "http") {
-		i := strings.LastIndex(jsonConfigAddress, "/")
-		if i < 0 {
-			return nil, errors.New("download endpoint error")
-		}
-
-		endPoints := []string{}
-		endPoints = append(endPoints, jsonConfigAddress[:i])
-		return endPoints, nil
-	} else {
-		return nil, errors.New("download endpoint not exist")
-	}
 }
