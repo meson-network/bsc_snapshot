@@ -2,6 +2,24 @@
 
 This is a tool for splitting, uploading, and downloading large files, allowing users to easily split files and achieve multi-threaded uploads and downloads, significantly improving the speed of uploading and downloading large files.
 
+## How to download
+
+get util
+
+```text
+wget <xxxxxx> // todo 
+```
+
+start download
+
+```text
+./bsc-data-file-utils download \
+    --file_config=<json file url> \
+    --thread=<thread quantity>
+```
+
+## For file owner
+
 ## split file
 
 Splitting the file will divide it into specified sizes and save it to the designated folder. Additionally, a 'files.json' file will be generated in the target folder to store information about the source file and the split files, making it convenient for various operations such as uploading and downloading.
