@@ -21,7 +21,7 @@ import (
 
 const (
 	DEFAULT_RETRY_TIMES     = 5
-	DEFAULT_THREAD          = 5
+	DEFAULT_THREAD          = 128
 	DEFAULT_REQUEST_TIMEOUT = time.Second * 7
 )
 
