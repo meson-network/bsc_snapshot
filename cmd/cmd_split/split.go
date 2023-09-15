@@ -16,20 +16,17 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meson-network/bsc-data-file-utils/src/common/parse_size"
-	"github.com/meson-network/bsc-data-file-utils/src/file_config"
 	"github.com/urfave/cli/v2"
+
+	"github.com/meson-network/bsc-data-file-utils/src/file_config"
+	"github.com/meson-network/bsc-data-file-utils/src/utils/parse_size"
 )
 
 const default_dest = "./dest"
 
 func Split(clictx *cli.Context) error {
+	originFilePath, destDir, sizeStr, thread := ReadParam(clictx)
 
-	//read params
-	originFilePath := clictx.String("file")
-	destDir := clictx.String("dest")
-	sizeStr := clictx.String("size")
-	thread := clictx.Int("thread")
 	if thread == 0 {
 		thread = runtime.NumCPU()
 	}
@@ -159,7 +156,7 @@ func splitFile(originFilePath string, destDir string, chunkSize int64, thread in
 		return splitConfig.ChunkedFileList[i].Offset < splitConfig.ChunkedFileList[j].Offset
 	})
 
-	configFilePath := filepath.Join(destDir, file_config.FILES_CONFIG_JSON_NAME)
+	configFilePath := filepath.Join(destDir, file_config.DEFAULT_CONFIG_NAME)
 	configJson, err := json.Marshal(splitConfig)
 	if err != nil {
 		fmt.Println("[ERROR] marshal file config err:", err.Error())
