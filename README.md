@@ -12,10 +12,22 @@ bsc_snapshot:[=================================>]  500 MB/s
 
 1. download this util
 
+* linux 64bit
+  
 ```text
-linux 64bit:    wget -O bsc_snapshot "<xxxxxx>" // todo 
-Mac:            wget -O bsc_snapshot "<xxxxxx>" // todo 
-Windows 64bit:  // todo
+wget -O bsc_snapshot "<xxxxxx>" 
+```
+
+* mac 64bit
+  
+```text
+wget -O bsc_snapshot "<xxxxxx>"
+```
+
+* windows 64bit
+  
+```text
+https://
 ```
 
 2. start download
@@ -90,9 +102,9 @@ type ChunkedFileInfo struct {
 
 ### Step 2. set download endpoint
 
-The 'endpoint' information in the 'config.json' file stores download endpoints, which allows automatic selection of download points when downloading files. Typically, multiple endpoints, in conjunction with multi-threaded downloads, can significantly increase download success rates and speed.
+The 'endpoint' information in the 'files.json' stores download endpoints, which allows automatic selection of download points when downloading files. Typically, multiple endpoints, in conjunction with multi-threaded downloads, can significantly increase download success rates and speed.
 
-The endpoint needs to be specified to a specific directory where files are stored, for example, if a file's download address is `http://yourdomain.com/bucket_dir/file1`, then the endpoint should be set to `http://yourdomain.com/bucket_dir`.
+The endpoint needs to be specified to a specific directory where files are stored, for example, if a file's download address is `https://yourdomain.com/bucket_dir/file.1`, then the endpoint should be set to `https://yourdomain.com/bucket_dir`.
 
 #### add endpoints
 
@@ -108,7 +120,7 @@ param description:
 
 ```text
     --config_path   // <required> files.json path
-    --endpoint      // <required> url of endpoint to add, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
+    --endpoint      // <required> endpoint url to add, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
 #### remove endpoints
