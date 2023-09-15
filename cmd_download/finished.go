@@ -12,7 +12,7 @@ type FinishedFiles struct {
 	File              *os.File
 	Lock              sync.RWMutex
 	Finished_file_map map[string]int64
-	f_writer *bufio.Writer
+	f_writer          *bufio.Writer
 }
 
 func NewFinishedFiles() *FinishedFiles {
@@ -40,7 +40,7 @@ func (f *FinishedFiles) ReadFinishFileList(finishedFilePath string) error {
 	f.File_path = finishedFilePath
 	f.File = file
 
-	f.f_writer=bufio.NewWriter(file)
+	f.f_writer = bufio.NewWriter(file)
 
 	return nil
 }

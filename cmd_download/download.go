@@ -278,7 +278,7 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 		fmt.Println("read exist file chunk err:", err)
 	} else {
 		md5Str := hex.EncodeToString(h.Sum(nil))
-		if strings.EqualFold(md5Str,chunkMd5) {
+		if strings.EqualFold(md5Str, chunkMd5) {
 			return nil
 		}
 	}
@@ -319,7 +319,7 @@ func downloadPart(downloadUrl string, downloadFilePath string, chunkSize int64, 
 	copyContent(target, reader)
 
 	md5Str := hex.EncodeToString(h.Sum(nil))
-	if strings.EqualFold(md5Str,chunkMd5) {
+	if strings.EqualFold(md5Str, chunkMd5) {
 		return nil
 	}
 
