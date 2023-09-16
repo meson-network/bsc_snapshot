@@ -29,7 +29,7 @@ Comparison with other download utils:
 
   
 
-1. Download this util and grant run permissions
+1. Download this util and grant execution permissions
 
   
 
