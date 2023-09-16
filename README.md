@@ -86,10 +86,10 @@ param description:
   
 
 ```text
---file_config // <required> files.json url
---thread // <optional> thread quantity. default is 128
---no_resume // <optional> default is false, if set true, it will re-download file without resume
---retry_times // <optional> retry times limit when some file download failed. default is 5
+    --file_config // <required> files.json url
+    --thread // <optional> thread quantity. default is 128
+    --no_resume // <optional> default is false, if set true, it will re-download file without resume
+    --retry_times // <optional> retry times limit when some file download failed. default is 5
 ```
 
   
@@ -97,7 +97,12 @@ The  --file_config 'files.json' is required which is a config file used to perfo
 
   
   
+
 ---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+
   
 
 ## [For maintainer] For file deployment  
