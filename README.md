@@ -1,7 +1,5 @@
-
 # BSC Snapshot
 
-  
 
 [![CodeFactor](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot/badge)](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot)
 
@@ -28,13 +26,14 @@ This repo solves the problem of binance BSC chain sync.
 
 Tools are provided for both user and maintainer to reduce the sync time approximately from 20 hours to 1 hour.
 
-The tools can be configured easily to split upload and download a large snapshot file with multi service providers
+The tools can be configured easily to split upload and download a large snapshot file with multi service providers.
 
-using multi threads. The service providers currently include meson.network which is a globally distributed files
+Multi threads downloading with multi endpoints significantly reduce the time cost of sync .
 
-cache layer. GreenField can be configured to work as the storage layer.
+The service providers currently include meson.network which is a globally distributed files cache layer.
 
-  
+GreenField can be configured to work as the storage layer.
+
   
   
 
