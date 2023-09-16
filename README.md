@@ -3,9 +3,6 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot/badge)](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot)
 [![GitHub](https://img.shields.io/github/license/meson-network/bsc_snapshot)](https://github.com/meson-network/bsc_snapshot/blob/main/LICENSE)
 ![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/NetworkMeson)
-<a  href="https://discord.com/invite/z6YfSHDkmS">
-<img  src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat"  />
-</a>
 
 This repo solves the problem of binance BSC chain sync.
 
