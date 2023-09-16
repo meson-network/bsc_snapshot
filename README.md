@@ -46,8 +46,7 @@ https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.1/bsc_snaps
 2. Start download
 
 ```text
- ./bsc_snapshot download \
-    --file_config=<files.json url>
+ ./bsc_snapshot download --file_config=https://pub-51a999999b804ea79dd5bce1cb10c4e4.r2.dev/geth-20230907/files.json
 ```
 
 param description:
