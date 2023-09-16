@@ -6,7 +6,7 @@
 
 This repo solves the problem of binance BSC chain sync.
 
-Tools are provided for both user and maintainer to reduce the sync time approximately from 20 hours to 1 hour.
+Tools are provided for both user and maintainer to reduce the sync time approximately from ~20 hours to ~1 hour.
 
 The tools can be configured easily to split upload and download a large snapshot file with multi service providers.
 
