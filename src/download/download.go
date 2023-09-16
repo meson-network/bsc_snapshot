@@ -1,6 +1,7 @@
 package download
 
 import (
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -18,6 +19,7 @@ import (
 
 const (
 	DEFAULT_RETRY_TIMES     = 8
+	RETRY_WAIT_SECS         = 5
 	DEFAULT_THREAD          = 128
 	DEFAULT_REQUEST_TIMEOUT = time.Second * 7
 )
@@ -138,21 +140,37 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 
 			fetcher := NewChunkFetcher(downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, pBar)
 
-			// try some times if download failed
-			for try := 0; try < retryNum; try++ {
+			file, err := os.OpenFile(fetcher.filePath, os.O_RDWR, os.ModePerm)
+			if err != nil {
+				errorFilesLock.Lock()
+				errorFiles = append(errorFiles, &chunkInfo)
+				errorFilesLock.Unlock()
+			}
+			defer file.Close()
 
+			_, err = file.Seek(fetcher.chunkOffset, 0)
+			if err != nil {
+				// fmt.Println("seek err:", err)
+				errorFilesLock.Lock()
+				errorFiles = append(errorFiles, &chunkInfo)
+				errorFilesLock.Unlock()
+			}
+
+			// try some times if download failed
+			downloaded := int64(0)
+			md5hash := md5.New()
+			for try := 0; try < retryNum; try++ {
 				// pick endpoint random
 				currentEndpoint := endPoints[rand.Intn(len(endPoints))]
 				downloadUrl := currentEndpoint + "/" + chunkInfo.FileName
 
-				downloadSize, err := fetcher.Download(downloadUrl)
+				downloadSize, err := fetcher.Download(downloadUrl, downloaded, file, &md5hash)
 				if err != nil {
+					downloaded += downloadSize
 					if try < retryNum-1 {
-						pBar.Add64(-downloadSize)
-						time.Sleep(3 * time.Second)
+						time.Sleep(RETRY_WAIT_SECS * time.Second)
 						continue
 					}
-					pBar.Add64(-downloadSize)
 					errorFilesLock.Lock()
 					errorFiles = append(errorFiles, &chunkInfo)
 					errorFilesLock.Unlock()
@@ -173,7 +191,7 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 	chunkFetchStat.Close()
 
 	if len(errorFiles) > 0 {
-		fmt.Println("[ERROR] the following files download failed, please try again:")
+		fmt.Println("[ERROR] the following files download failed, please try again.")
 		for _, v := range errorFiles {
 			fmt.Println(v.FileName)
 		}
