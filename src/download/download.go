@@ -40,6 +40,8 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 		return err
 	}
 
+	fmt.Printf("[INFO] File: < %s > \n",conf.RawFile.FileName)
+
 	existEndPoints, err := file_config.FormatEndpoints(conf.EndPoint)
 	if err != nil {
 		fmt.Println("[ERROR] json config endpoint format error")
