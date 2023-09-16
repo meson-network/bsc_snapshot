@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	DEFAULT_RETRY_TIMES     = 5
+	DEFAULT_RETRY_TIMES     = 8
 	DEFAULT_THREAD          = 128
 	DEFAULT_REQUEST_TIMEOUT = time.Second * 7
 )
@@ -40,7 +40,8 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 		return err
 	}
 
-	fmt.Printf("[INFO] File: < %s > \n",conf.RawFile.FileName)
+	fmt.Printf("[INFO] File: < %s > \n", conf.RawFile.FileName)
+	fmt.Println("[INFO] download thread number:", thread)
 
 	existEndPoints, err := file_config.FormatEndpoints(conf.EndPoint)
 	if err != nil {
@@ -139,7 +140,7 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 
 			// try some times if download failed
 			for try := 0; try < retryNum; try++ {
-				
+
 				// pick endpoint random
 				currentEndpoint := endPoints[rand.Intn(len(endPoints))]
 				downloadUrl := currentEndpoint + "/" + chunkInfo.FileName
@@ -164,7 +165,7 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 	}
 	// must wait wg first
 	wg.Wait()
-	if len(errorFiles) == 0{
+	if len(errorFiles) == 0 {
 		pBar.SetCurrent(conf.RawFile.Size)
 	}
 	pBar.Finish()

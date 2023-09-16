@@ -55,7 +55,7 @@ param description:
     --file_config   // <required> files.json url
     --thread        // <optional> thread quantity. default is 128
     --no_resume     // <optional> default is false, if set true, it will re-download file without resume
-    --retry_times   // <optional> retry times limit when some file download failed. default is 5
+    --retry_times   // <optional> retry times limit when some file download failed. default is 8
 ```
 
 To download files, you need to provide 'files.json,' which is typically the file's download address (or it can also be a local file path). The download program will use the information in 'files.json' to perform multi-threaded downloads. During the download, the original source file is automatically reconstructed without the need for manual merging. Downloading supports resuming from breakpoints. If the download is interrupted due to network or other reasons, you simply need to rerun the download program to continue. After each small file is downloaded, an MD5 checksum is performed to ensure the integrity of the downloaded files.
