@@ -6,9 +6,6 @@
 <a  href="https://discord.com/invite/z6YfSHDkmS">
 <img  src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat"  />
 </a>
-![GitHub forks](https://img.shields.io/github/forks/meson-network/bsc_snapshot)
-![GitHub issues](https://img.shields.io/github/issues/meson-network/bsc_snapshot)
-![GitHub all releases](https://img.shields.io/github/downloads/meson-network/bsc_snapshot/total)
 
 This repo solves the problem of binance BSC chain sync.
 
@@ -105,7 +102,7 @@ The  --file_config 'files.json' is required which is a config file used to perfo
 
   
 
-## [For maintainer] For file deployment  
+## [For maintainer] 
 
   
 
