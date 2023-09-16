@@ -1,26 +1,14 @@
 # BSC Snapshot
 
-
 [![CodeFactor](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot/badge)](https://www.codefactor.io/repository/github/meson-network/bsc_snapshot)
-
 [![GitHub](https://img.shields.io/github/license/meson-network/bsc_snapshot)](https://github.com/meson-network/bsc_snapshot/blob/main/LICENSE)
-
 ![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/NetworkMeson)
-
 <a  href="https://discord.com/invite/z6YfSHDkmS">
-
 <img  src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat"  />
-
 </a>
-
 ![GitHub forks](https://img.shields.io/github/forks/meson-network/bsc_snapshot)
-
 ![GitHub issues](https://img.shields.io/github/issues/meson-network/bsc_snapshot)
-
 ![GitHub all releases](https://img.shields.io/github/downloads/meson-network/bsc_snapshot/total)
-
-  
-  
 
 This repo solves the problem of binance BSC chain sync.
 
@@ -34,25 +22,14 @@ The service providers currently include meson.network which is a globally distri
 
 GreenField can be configured to work as the storage layer.
 
-  
-  
-
 Comparison with other download utils:
 
-  
-
 | Util | Speed |
-
 | ---- | ---- |
-
 | wget | [#####--------------------------------------------------------] 35 MB/s |
-
 | aria2c | [#########################-----------------------------] 350 MB/s |
-
 | bsc_snapshot | [###############################################] 500 MB/s|
 
-  
-  
 
 ## [For user] How to use
 
@@ -109,15 +86,10 @@ param description:
   
 
 ```text
-
 --file_config // <required> files.json url
-
 --thread // <optional> thread quantity. default is 128
-
 --no_resume // <optional> default is false, if set true, it will re-download file without resume
-
 --retry_times // <optional> retry times limit when some file download failed. default is 5
-
 ```
 
   
@@ -151,17 +123,11 @@ Splitting file tool helps to divide the source file into specified sizes and sav
 
 
 ```text
-
-./bsc_snapshot split \
-
---file=<file path> \
-
---dest=<to dir path> \
-
---size=<chunk size> \
-
---thread=<thread quantity>
-
+ ./bsc_snapshot split \
+    --file=<file path> \
+    --dest=<to dir path> \
+    --size=<chunk size> \
+    --thread=<thread quantity>
 ```
 
   
@@ -171,15 +137,10 @@ Param description:
   
 
 ```text
-
---file // <required> file path
-
---size // <required> each chunk size ex. 200m
-
---dest // <optional> dest dir path ex. './dest'. default './dest'
-
---thread // <optional> thread quantity. default = cpu quantity
-
+    --file   // <required> file path
+    --size   // <required> each chunk size ex. 200m 
+    --dest   // <optional> dest dir path ex. './dest'. default './dest'   
+    --thread // <optional> thread quantity. default = cpu quantity
 ```
 
   
@@ -187,43 +148,24 @@ Param description:
 #### files.json Struct
 
   
-
 ```golang
-
-type  FileConfig  struct {
-
-RawFile RawFileInfo `json:"raw_file"`
-
-ChunkedFileList []ChunkedFileInfo `json:"chunked_file_list"`
-
-EndPoint []string  `json:"end_point"`
-
+type FileConfig struct {
+    RawFile         RawFileInfo       `json:"raw_file"`
+    ChunkedFileList []ChunkedFileInfo `json:"chunked_file_list"`
+    EndPoint        []string          `json:"end_point"`
 }
 
-  
-
-type  RawFileInfo  struct {
-
-FileName string  `json:"file_name"`
-
-Size int64  `json:"size"`
-
+type RawFileInfo struct {
+    FileName string `json:"file_name"`
+    Size     int64  `json:"size"`
 }
 
-  
-
-type  ChunkedFileInfo  struct {
-
-FileName string  `json:"file_name"`
-
-Md5 string  `json:"md5"`
-
-Size int64  `json:"size"`
-
-Offset int64  `json:"offset"`
-
+type ChunkedFileInfo struct {
+    FileName string `json:"file_name"`
+    Md5      string `json:"md5"`
+    Size     int64  `json:"size"`
+    Offset   int64  `json:"offset"`
 }
-
 ```
 
   
@@ -246,13 +188,9 @@ add download endpoint
   
 
 ```text
-
-./bsc_snapshot endpoint add \
-
---config_path=<files.json path> \
-
---endpoint=<endpoint url>
-
+ ./bsc_snapshot endpoint add \
+    --config_path=<files.json path> \
+    --endpoint=<endpoint url>
 ```
 
   
@@ -262,11 +200,8 @@ param description:
   
 
 ```text
-
---config_path // <required> files.json path
-
---endpoint // <required> endpoint url to add, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
-
+    --config_path   // <required> files.json path
+    --endpoint      // <required> endpoint url to add, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
   
@@ -280,13 +215,9 @@ remove download endpoint
   
 
 ```text
-
-./bsc_snapshot endpoint remove \
-
---config_path=<files.json path> \
-
---endpoint=<endpoint url>
-
+ ./bsc_snapshot endpoint remove \
+    --config_path=<files.json path> \
+    --endpoint=<endpoint url>
 ```
 
   
@@ -296,11 +227,8 @@ param description:
   
 
 ```text
-
---config_path // <required> files.json path
-
---endpoint // <required> url of endpoint to remove, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
-
+    --config_path   // <required> files.json path
+    --endpoint      // <required> url of endpoint to remove, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
   
@@ -314,13 +242,9 @@ set download endpoint, overwrite exist endpoints
   
 
 ```text
-
-./bsc_snapshot endpoint set \
-
---config_path=<files.json path> \
-
---endpoint=<endpoint url>
-
+ ./bsc_snapshot endpoint set \
+    --config_path=<files.json path> \
+    --endpoint=<endpoint url>
 ```
 
   
@@ -330,11 +254,8 @@ param description:
   
 
 ```text
-
---config_path // <required> files.json path
-
---endpoint // <required> url of endpoint to set, overwrite exist endpoints, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
-
+    --config_path   // <required> files.json path
+    --endpoint      // <required> url of endpoint to set, overwrite exist endpoints, support multiple endpoint, ex. --endpoint=<url1> --endpoint=<url2>
 ```
 
   
@@ -348,11 +269,8 @@ remove all endpoint
   
 
 ```text
-
-./bsc_snapshot endpoint clear \
-
---config_path=<files.json path> \
-
+ ./bsc_snapshot endpoint clear \
+    --config_path=<files.json path> \
 ```
 
   
@@ -362,9 +280,7 @@ param description:
   
 
 ```text
-
---config_path // <required> files.json path
-
+    --config_path   // <required> files.json path
 ```
 
   
@@ -378,11 +294,8 @@ output exist endpoints
   
 
 ```text
-
-./bsc_snapshot endpoint print \
-
---config_path=<files.json path> \
-
+ ./bsc_snapshot endpoint print \
+    --config_path=<files.json path> \
 ```
 
   
@@ -392,9 +305,7 @@ param description:
   
 
 ```text
-
---config_path // <required> files.json path
-
+    --config_path   // <required> files.json path
 ```
 
   
@@ -411,25 +322,15 @@ Before uploading files to Cloudflare R2 you need to create a bucket on R2 and ob
   
 
 ```text
-
-./bsc_snapshot upload r2 \
-
---dir=<chunked file dir path> \
-
---bucket_name=<bucket name> \
-
---additional_path=<dir name> \
-
---account_id=<r2 account id> \
-
---access_key_id=<r2 access key id> \
-
---access_key_secret=<r2 access key secret> \
-
---thread=<thread quantity> \
-
---retry_times=<retry times>
-
+ ./bsc_snapshot upload r2 \
+    --dir=<chunked file dir path> \
+    --bucket_name=<bucket name> \
+    --additional_path=<dir name> \
+    --account_id=<r2 account id> \
+    --access_key_id=<r2 access key id>  \
+    --access_key_secret=<r2 access key secret> \
+    --thread=<thread quantity>  \
+    --retry_times=<retry times>
 ```
 
   
@@ -439,21 +340,12 @@ param description:
   
 
 ```text
-
---dir // <required> dir path to upload
-
---bucket_name // <required> bucket name in r2
-
---additional_path // <optional> dir name in bucket. default is "", means in bucket root dir
-
---account_id // <required> r2 account id
-
---access_key_id // <required> r2 access key id
-
---access_key_secret // <required> r2 access key secret
-
---thread // <optional> thread quantity. default is 5
-
---retry_times // <optional> retry times limit when some file upload failed. default is 5
-
+    --dir               // <required> dir path to upload
+    --bucket_name       // <required> bucket name in r2
+    --additional_path   // <optional> dir name in bucket. default is "", means in bucket root dir
+    --account_id        // <required> r2 account id
+    --access_key_id     // <required> r2 access key id
+    --access_key_secret // <required> r2 access key secret
+    --thread            // <optional> thread quantity. default is 5
+    --retry_times       // <optional> retry times limit when some file upload failed. default is 5
 ```
