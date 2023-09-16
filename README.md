@@ -28,19 +28,19 @@ Comparison with other download utils:
 * Linux 64bit
   
 ```text
-wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.2/bsc_snapshot_linux_amd64" && chmod +x ./bsc_snapshot
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.3/bsc_snapshot_linux_amd64" && chmod +x ./bsc_snapshot
 ```
 
 * Mac 64bit
   
 ```text
-wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.2/bsc_snapshot_darwin" && chmod +x ./bsc_snapshot
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.3/bsc_snapshot_darwin" && chmod +x ./bsc_snapshot
 ```
 
 * Windows 64bit
   
 ```text
-https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.2/bsc_snapshot.exe
+https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.3/bsc_snapshot.exe
 ```
 
 2. Start download

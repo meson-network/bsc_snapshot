@@ -55,7 +55,7 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 			fmt.Println("[ERROR] ", err.Error())
 			return err
 		}
-		fmt.Println("[INFO] use some endpoint with json config file")
+		// fmt.Println("[INFO] use some endpoint with json config file")
 
 		endPoints = endPointsFromFile
 	} else {
