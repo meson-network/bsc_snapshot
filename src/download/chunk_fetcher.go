@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vbauerster/mpb/v8"
+	"github.com/cheggaaa/pb/v3"
 
 	"github.com/meson-network/bsc_snapshot/src/utils/custom_reader"
 )
@@ -21,54 +21,55 @@ type ChunkFetcher struct {
 	chunkSize   int64
 	chunkOffset int64
 	chunkMd5    string
-	bar         *mpb.Bar
+	downloadBar *pb.ProgressBar
 }
 
 func NewChunkFetcher(filePath string,
-	chunkSize int64, chunkOffset int64, chunkMd5 string, bar *mpb.Bar) *ChunkFetcher {
+	chunkSize int64, chunkOffset int64, chunkMd5 string, bar *pb.ProgressBar) *ChunkFetcher {
 
 	return &ChunkFetcher{
 		filePath:    filePath,
 		chunkSize:   chunkSize,
 		chunkOffset: chunkOffset,
 		chunkMd5:    chunkMd5,
-		bar:         bar,
+		downloadBar: bar,
 	}
 }
 
-func (c *ChunkFetcher) Download(downloadUrl string) error {
+func (c *ChunkFetcher) Download(downloadUrl string) (int64, error) {
 	file, err := os.OpenFile(c.filePath, os.O_RDWR, os.ModePerm)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer file.Close()
 
 	_, err = file.Seek(c.chunkOffset, 0)
 	if err != nil {
 		// fmt.Println("seek err:", err)
-		return err
+		return 0, err
 	}
 
 	if exists := validateChunk(file, c.chunkSize, c.chunkMd5); exists {
-		return nil
+		return c.chunkSize, nil
 	}
 
 	// download
 	resp, err := c.fetchChunk(downloadUrl)
 	if err != nil {
 		// fmt.Println("fetch err:", err)
-		return err
+		return 0, err
 	}
 	defer resp.Body.Close()
 	if c.chunkSize != resp.ContentLength {
-		return errors.New("remote file size error")
+		return 0, errors.New("remote file size error")
 	}
 
 	// use custom reader to show upload progress
 	reader := &custom_reader.CustomReader{
-		Reader: resp.Body,
-		Size:   c.chunkSize,
-		Bar:    c.bar,
+		Reader:      resp.Body,
+		Size:        c.chunkSize,
+		DownloadBar: c.downloadBar,
+		UploadBar:   nil,
 	}
 
 	file.Seek(c.chunkOffset, 0)
@@ -92,19 +93,19 @@ func validateChunk(src io.Reader, chunkSize int64, chunkMd5 string) bool {
 	return false
 }
 
-func writeChunk(src io.Reader, dst io.Writer, chunkSize int64, chunkMd5 string) error {
+func writeChunk(src io.Reader, dst io.Writer, chunkSize int64, chunkMd5 string) (int64, error) {
 
 	md5hash := md5.New()
 	target := io.MultiWriter(dst, md5hash)
 
-	copyContent(target, src)
+	copySize := copyContent(target, src)
 
 	md5Str := hex.EncodeToString(md5hash.Sum(nil))
 	if strings.EqualFold(md5Str, chunkMd5) {
-		return nil
+		return copySize, nil
 	}
 
-	return errors.New("md5 not equal")
+	return copySize, errors.New("md5 not equal")
 }
 
 func (c *ChunkFetcher) fetchChunk(downloadUrl string) (*http.Response, error) {
@@ -128,7 +129,7 @@ func (c *ChunkFetcher) fetchChunk(downloadUrl string) (*http.Response, error) {
 	return resp, nil
 }
 
-func copyContent(dst io.Writer, src io.Reader) {
+func copyContent(dst io.Writer, src io.Reader) int64 {
 	// need check download speed
 	buff := make([]byte, 32*1024)
 	written := 0
@@ -185,4 +186,6 @@ outLoop:
 			break
 		}
 	}
+
+	return int64(written)
 }

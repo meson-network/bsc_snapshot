@@ -57,9 +57,10 @@ func (u *UploaderWorker) UploadFile(localFilePath string) error {
 
 	// use custom reader to show upload progress
 	reader := &custom_reader.CustomReader{
-		Reader: uploadFile,
-		Size:   fileInfo.Size(),
-		Bar:    u.bar,
+		Reader:      uploadFile,
+		Size:        fileInfo.Size(),
+		DownloadBar: nil,
+		UploadBar: u.bar,
 	}
 
 	_, err = u.client.PutObject(context.Background(), &s3.PutObjectInput{

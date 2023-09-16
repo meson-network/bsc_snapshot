@@ -3,20 +3,17 @@ package download
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
-
-	"github.com/vbauerster/mpb/v8"
-	"github.com/vbauerster/mpb/v8/decor"
 
 	"github.com/meson-network/bsc_snapshot/src/config"
 	"github.com/meson-network/bsc_snapshot/src/model"
 	"github.com/meson-network/bsc_snapshot/src/utils/file_config"
+
+	"github.com/cheggaaa/pb/v3"
 )
 
 const (
@@ -112,13 +109,19 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 	var errorFilesLock sync.Mutex
 
 	var wg sync.WaitGroup
-	progressBar := mpb.New(mpb.WithAutoRefresh())
 
-	counter := int64(0)
+	pBar := pb.New64(conf.RawFile.Size)
+	pBar.SetRefreshRate(time.Second)
+	pBar.Set(pb.Bytes, true)
+	pBar.Set(pb.SIBytesPrefix, true)
+	pBar.Start()
+
+	// counter := int64(0)
 	for _, v := range conf.ChunkedFileList {
 		chunkInfo := v
 		if chunkFetchStat.IsDone(chunkInfo.FileName) {
 			// if already downloaded, skip it
+			pBar.Add64(chunkInfo.Size)
 			continue
 		}
 
@@ -130,56 +133,27 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 				wg.Done()
 			}()
 
-			c := atomic.AddInt64(&counter, 1)
-			bar := progressBar.AddBar(
-				int64(100),
-				mpb.BarRemoveOnComplete(),
-				mpb.BarFillerClearOnComplete(),
-				mpb.PrependDecorators(
-					// simple name decorator
-					decor.Name(fmt.Sprintf(" %d / %d %s ", c, len(conf.ChunkedFileList), chunkInfo.FileName)),
-					// decor.DSyncWidth bit enables column width synchronization
-					decor.Percentage(decor.WCSyncSpace),
-				),
-				mpb.AppendDecorators(
-					decor.OnComplete(
-						decor.Name(""), "SUCCESS ",
-					),
-					decor.OnAbort(
-						decor.Elapsed(decor.ET_STYLE_GO), "FAILED ",
-					),
-				),
-			)
-
-			bar.SetPriority(math.MaxInt - len(conf.ChunkedFileList) + int(c))
-
-			fetcher := NewChunkFetcher(downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, bar)
+			fetcher := NewChunkFetcher(downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, pBar)
 
 			// try some times if download failed
 			for try := 0; try < retryNum; try++ {
-				bar.SetCurrent(0)
-
+				
 				// pick endpoint random
 				currentEndpoint := endPoints[rand.Intn(len(endPoints))]
 				downloadUrl := currentEndpoint + "/" + chunkInfo.FileName
 
-				err := fetcher.Download(downloadUrl)
+				downloadSize, err := fetcher.Download(downloadUrl)
 				if err != nil {
 					if try < retryNum-1 {
+						pBar.Add64(-downloadSize)
 						time.Sleep(3 * time.Second)
 						continue
 					}
+					pBar.Add64(-downloadSize)
 					errorFilesLock.Lock()
 					errorFiles = append(errorFiles, &chunkInfo)
 					errorFilesLock.Unlock()
-
-					bar.Abort(false)
-					bar.SetPriority(math.MaxInt - int(c) - len(conf.ChunkedFileList))
 				} else {
-					if !bar.Completed() {
-						bar.SetCurrent(100)
-					}
-					bar.SetPriority(int(c))
 					chunkFetchStat.SetDone(chunkInfo.FileName)
 					return
 				}
@@ -188,7 +162,10 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 	}
 	// must wait wg first
 	wg.Wait()
-	progressBar.Wait()
+	if len(errorFiles) == 0{
+		pBar.SetCurrent(conf.RawFile.Size)
+	}
+	pBar.Finish()
 
 	chunkFetchStat.Close()
 

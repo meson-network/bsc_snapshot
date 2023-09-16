@@ -4,22 +4,27 @@ import (
 	"io"
 	"sync/atomic"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/vbauerster/mpb/v8"
 )
 
 type CustomReader struct {
-	Reader io.Reader
-	Size   int64
-	read   int64
-	*mpb.Bar
+	Reader      io.Reader
+	Size        int64
+	read        int64
+	UploadBar   *mpb.Bar
+	DownloadBar *pb.ProgressBar
 }
 
 func (r *CustomReader) Read(p []byte) (int, error) {
 	n, err := r.Reader.Read(p)
 	atomic.AddInt64(&r.read, int64(n))
 
-	if r.Bar != nil {
-		r.Bar.SetCurrent(int64(float32(r.read*100) / float32(r.Size)))
+	if r.UploadBar != nil {
+		r.UploadBar.SetCurrent(int64(float32(r.read*100) / float32(r.Size)))
+	}
+	if r.DownloadBar != nil {
+		r.DownloadBar.Add64(int64(n))
 	}
 	return n, err
 }
