@@ -37,7 +37,7 @@ Comparison with other download utils:
 
 ```text
 
-wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.3/bsc_snapshot_linux_amd64" && chmod +x ./bsc_snapshot
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.4/bsc_snapshot_linux_amd64" && chmod +x ./bsc_snapshot
 
 ```
 
@@ -47,7 +47,7 @@ wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/dow
 
 ```text
 
-wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.3/bsc_snapshot_darwin" && chmod +x ./bsc_snapshot
+wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.4/bsc_snapshot_darwin" && chmod +x ./bsc_snapshot
 
 ```
 
@@ -57,7 +57,7 @@ wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/dow
 
 ```text
 
-https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.3/bsc_snapshot.exe
+https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.4/bsc_snapshot.exe
 
 ```
 
@@ -83,7 +83,7 @@ param description:
     --file_config // <required> files.json url
     --thread // <optional> thread quantity. default is 128
     --no_resume // <optional> default is false, if set true, it will re-download file without resume
-    --retry_times // <optional> retry times limit when some file download failed. default is 5
+    --retry_times // <optional> retry times limit when some file download failed. default is 8
 ```
 
   
