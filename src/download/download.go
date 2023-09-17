@@ -22,7 +22,7 @@ const (
 	DEFAULT_REQUEST_TIMEOUT = time.Second * 7
 )
 
-func Download(configFilePath string, thread int, retryNum int, noResume bool) error {
+func Download(configFilePath string, destDir string, thread int, retryNum int, noResume bool) error {
 	if configFilePath == "" {
 		fmt.Println("[ERROR] json config error, please input correct address or file path")
 		return errors.New("json config error")
@@ -65,18 +65,29 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 		endPoints = existEndPoints
 	}
 
+	if destDir == "" {
+		destDir = "./"
+	}
+
 	// gen raw file
-	rawFilePath := filepath.Join("./", conf.RawFile.FileName)
+	rawFilePath := filepath.Join(destDir, conf.RawFile.FileName)
+	rawFileDir := filepath.Dir(rawFilePath)
+	err = os.MkdirAll(rawFileDir, os.ModePerm)
+	if err != nil {
+		fmt.Println("[ERROR] ", err.Error())
+		return err
+	}
+
 	if fileStat, _ := os.Stat(rawFilePath); fileStat != nil {
 		fmt.Println("[ERROR]", "<", conf.RawFile.FileName, ">", "already exist")
 		return errors.New("file exist")
 	}
 
 	downloadingFileName := conf.RawFile.FileName + ".downloading"
-	downloadingFilePath := filepath.Join("./", downloadingFileName)
+	downloadingFilePath := filepath.Join(destDir, downloadingFileName)
 
 	chunkMetaName := "." + conf.RawFile.FileName + ".downloaded"
-	chunkMetaPath := filepath.Join("./", chunkMetaName)
+	chunkMetaPath := filepath.Join(destDir, chunkMetaName)
 
 	if noResume {
 		// clean up existing block

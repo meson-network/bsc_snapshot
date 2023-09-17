@@ -13,6 +13,6 @@ import (
 func Download(clictx *cli.Context) error {
 	fmt.Println(color.Green(basic.Logo))
 
-	jsonConfigAddress, thread, retryNum, noResume := ReadParam(clictx)
-	return download.Download(jsonConfigAddress, thread, retryNum, noResume)
+	jsonConfigAddress, destDir, thread, retryNum, noResume := ReadParam(clictx)
+	return download.Download(jsonConfigAddress, destDir, thread, retryNum, noResume)
 }
