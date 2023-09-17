@@ -36,9 +36,7 @@ Comparison with other download utils:
 * Linux 64bit
 
 ```text
-
 wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.6/bsc_snapshot_linux_amd64" && chmod +x ./bsc_snapshot
-
 ```
 
   
@@ -46,9 +44,7 @@ wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/dow
 * Mac 64bit
 
 ```text
-
 wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.6/bsc_snapshot_darwin" && chmod +x ./bsc_snapshot
-
 ```
 
   
@@ -56,9 +52,7 @@ wget -O bsc_snapshot "https://github.com/meson-network/bsc_snapshot/releases/dow
 * Windows 64bit
 
 ```text
-
 https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.6/bsc_snapshot.exe
-
 ```
 
   
@@ -68,9 +62,7 @@ https://github.com/meson-network/bsc_snapshot/releases/download/v1.0.6/bsc_snaps
   
 
 ```text
-
 ./bsc_snapshot download --file_config=https://pub-51a999999b804ea79dd5bce1cb10c4e4.r2.dev/geth-20230907/files.json
-
 ```
 
   
