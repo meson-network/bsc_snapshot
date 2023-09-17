@@ -39,7 +39,7 @@ func NewChunkFetcher(filePath string,
 }
 
 func (c *ChunkFetcher) Download(downloadUrl string, downloaded_bytes int64, file *os.File, md5hash *hash.Hash) (int64, error) {
-	
+
 	// download
 	resp, err := c.fetchChunk(downloadUrl, int(downloaded_bytes))
 	if err != nil {
@@ -48,18 +48,22 @@ func (c *ChunkFetcher) Download(downloadUrl string, downloaded_bytes int64, file
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode<200 || resp.StatusCode>=400{
+		return 0, errors.New("response status code error")
+	}
+
 	haveRead := downloaded_bytes
-	if downloaded_bytes>0{
+	if downloaded_bytes > 0 {
 		if resp.StatusCode != http.StatusPartialContent {
 			haveRead = 0
 		}
-	
+
 		contentRange := resp.Header.Get("Content-Range")
 		if contentRange == "" {
 			haveRead = 0
 		}
 	}
-	
+
 	if (c.chunkSize - haveRead) != resp.ContentLength {
 		return 0, errors.New("remote file size error")
 	}
