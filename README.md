@@ -8,9 +8,9 @@ This repo solves the problem of binance BSC chain sync.
 
 Tools are provided for both user and maintainer to reduce the sync time approximately from ~20 hours to ~1 hour.
 
-The tools can be configured easily to split upload and download a large snapshot file with multi service providers.
+The tools can be configured easily to split upload and download a large snapshot file with multiple service providers.
 
-Multi threads downloading with multi endpoints significantly reduce the time cost of sync .
+Multi-threads downloading with multi-endpoints significantly reduce the time cost of sync .
 
 The service providers currently include meson.network which is a globally distributed files cache layer.
 
