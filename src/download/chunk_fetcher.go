@@ -6,6 +6,7 @@ import (
 	"errors"
 	"hash"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -15,45 +16,81 @@ import (
 
 	"github.com/cheggaaa/pb/v3"
 
+	"github.com/meson-network/bsc_snapshot/src/model"
 	"github.com/meson-network/bsc_snapshot/src/utils/custom_reader"
 )
 
 type ChunkFetcher struct {
 	filePath    string
-	chunkSize   int64
-	chunkOffset int64
-	chunkMd5    string
+	chunkInfo   *model.ChunkedFileInfo
 	downloadBar *pb.ProgressBar
 }
 
-func NewChunkFetcher(filePath string,
-	chunkSize int64, chunkOffset int64, chunkMd5 string, bar *pb.ProgressBar) *ChunkFetcher {
+func NewChunkFetcher(filePath string, chunkInfo *model.ChunkedFileInfo, bar *pb.ProgressBar) *ChunkFetcher {
 
 	return &ChunkFetcher{
 		filePath:    filePath,
-		chunkSize:   chunkSize,
-		chunkOffset: chunkOffset,
-		chunkMd5:    chunkMd5,
+		chunkInfo:   chunkInfo,
 		downloadBar: bar,
 	}
 }
 
-func (c *ChunkFetcher) Download(downloadUrl string, downloaded_bytes int64, file *os.File, md5hash *hash.Hash) (int64, error) {
+func (c *ChunkFetcher) Download(endPoints []string, retryNum int,
+	errFn func(*model.ChunkedFileInfo)) bool {
+
+	file, err := os.OpenFile(c.filePath, os.O_RDWR, os.ModePerm)
+	if err != nil {
+		errFn(c.chunkInfo)
+	}
+	defer file.Close()
+
+	_, err = file.Seek(c.chunkInfo.Offset, 0)
+	if err != nil {
+		// fmt.Println("seek err:", err)
+		errFn(c.chunkInfo)
+	}
+	defer resp.Body.Close()
+
+	// try some times if download failed
+	downloaded := int64(0)
+	md5hash := md5.New()
+	for try := 0; try < retryNum; try++ {
+		// pick endpoint random
+		currentEndpoint := endPoints[rand.Intn(len(endPoints))]
+		downloadUrl := currentEndpoint + "/" + c.chunkInfo.FileName
+
+		downloadSize, err := c.doDownload(downloadUrl, downloaded, file, &md5hash)
+		if err != nil {
+			downloaded += downloadSize
+			if try < retryNum-1 {
+				time.Sleep(RETRY_WAIT_SECS * time.Second)
+				continue
+			}
+			errFn(c.chunkInfo)
+		} else {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *ChunkFetcher) doDownload(url string, startPos int64, file *os.File, md5hash *hash.Hash) (int64, error) {
 
 	// download
-	resp, err := c.fetchChunk(downloadUrl, int(downloaded_bytes))
+	resp, err := c.fetchChunk(url, int(startPos))
 	if err != nil {
 		// fmt.Println("fetch err:", err)
 		return 0, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode<200 || resp.StatusCode>=400{
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		return 0, errors.New("response status code error")
 	}
 
-	haveRead := downloaded_bytes
-	if downloaded_bytes > 0 {
+	haveRead := startPos
+	if startPos > 0 {
 		if resp.StatusCode != http.StatusPartialContent {
 			haveRead = 0
 		}
@@ -64,21 +101,21 @@ func (c *ChunkFetcher) Download(downloadUrl string, downloaded_bytes int64, file
 		}
 	}
 
-	if (c.chunkSize - haveRead) != resp.ContentLength {
+	if (c.chunkInfo.Size - haveRead) != resp.ContentLength {
 		return 0, errors.New("remote file size error")
 	}
 
 	// use custom reader to show upload progress
 	reader := &custom_reader.CustomReader{
 		Reader:      resp.Body,
-		Size:        c.chunkSize,
-		Have_read:   haveRead,
+		Size:        c.chunkInfo.Size,
+		Pos:         haveRead,
 		DownloadBar: c.downloadBar,
 		UploadBar:   nil,
 	}
 
-	file.Seek(c.chunkOffset+haveRead, 0)
-	return writeChunk(reader, file, c.chunkSize, c.chunkMd5, md5hash)
+	file.Seek(c.chunkInfo.Offset+haveRead, 0)
+	return writeChunk(reader, file, c.chunkInfo.Size, c.chunkInfo.Md5, md5hash)
 }
 
 func validateChunk(src io.Reader, chunkSize int64, chunkMd5 string) bool {
@@ -112,7 +149,7 @@ func writeChunk(src io.Reader, dst io.Writer, chunkSize int64, chunkMd5 string, 
 	return copySize, errors.New("md5 not equal")
 }
 
-func (c *ChunkFetcher) fetchChunk(downloadUrl string, offset int) (*http.Response, error) {
+func (c *ChunkFetcher) fetchChunk(url string, offset int) (*http.Response, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
@@ -126,7 +163,7 @@ func (c *ChunkFetcher) fetchChunk(downloadUrl string, offset int) (*http.Respons
 		},
 	}
 
-	req, err := http.NewRequest("GET", downloadUrl, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}

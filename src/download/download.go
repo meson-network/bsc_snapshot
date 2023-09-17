@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -138,46 +137,14 @@ func Download(configFilePath string, thread int, retryNum int, noResume bool) er
 				wg.Done()
 			}()
 
-			fetcher := NewChunkFetcher(downloadingFilePath, chunkInfo.Size, chunkInfo.Offset, chunkInfo.Md5, pBar)
+			fetcher := NewChunkFetcher(downloadingFilePath, &chunkInfo, pBar)
 
-			file, err := os.OpenFile(fetcher.filePath, os.O_RDWR, os.ModePerm)
-			if err != nil {
+			if isDone := fetcher.Download(endPoints, retryNum, func(*model.ChunkedFileInfo) {
 				errorFilesLock.Lock()
 				errorFiles = append(errorFiles, &chunkInfo)
 				errorFilesLock.Unlock()
-			}
-			defer file.Close()
-
-			_, err = file.Seek(fetcher.chunkOffset, 0)
-			if err != nil {
-				// fmt.Println("seek err:", err)
-				errorFilesLock.Lock()
-				errorFiles = append(errorFiles, &chunkInfo)
-				errorFilesLock.Unlock()
-			}
-
-			// try some times if download failed
-			downloaded := int64(0)
-			md5hash := md5.New()
-			for try := 0; try < retryNum; try++ {
-				// pick endpoint random
-				currentEndpoint := endPoints[rand.Intn(len(endPoints))]
-				downloadUrl := currentEndpoint + "/" + chunkInfo.FileName
-
-				downloadSize, err := fetcher.Download(downloadUrl, downloaded, file, &md5hash)
-				if err != nil {
-					downloaded += downloadSize
-					if try < retryNum-1 {
-						time.Sleep(RETRY_WAIT_SECS * time.Second)
-						continue
-					}
-					errorFilesLock.Lock()
-					errorFiles = append(errorFiles, &chunkInfo)
-					errorFilesLock.Unlock()
-				} else {
-					chunkFetchStat.SetDone(chunkInfo.FileName)
-					return
-				}
+			}); isDone {
+				chunkFetchStat.SetDone(chunkInfo.FileName)
 			}
 		}()
 	}

@@ -11,17 +11,17 @@ import (
 type CustomReader struct {
 	Reader      io.Reader
 	Size        int64
-	Have_read   int64
+	Pos         int64
 	UploadBar   *mpb.Bar
 	DownloadBar *pb.ProgressBar
 }
 
 func (r *CustomReader) Read(p []byte) (int, error) {
 	n, err := r.Reader.Read(p)
-	atomic.AddInt64(&r.Have_read, int64(n))
+	atomic.AddInt64(&r.Pos, int64(n))
 
 	if r.UploadBar != nil {
-		r.UploadBar.SetCurrent(int64(float32(r.Have_read*100) / float32(r.Size)))
+		r.UploadBar.SetCurrent(int64(float32(r.Pos*100) / float32(r.Size)))
 	}
 	if r.DownloadBar != nil {
 		r.DownloadBar.Add64(int64(n))
