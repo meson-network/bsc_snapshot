@@ -1,6 +1,7 @@
 package download
 
 import (
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"os"
@@ -18,7 +19,7 @@ import (
 const (
 	DEFAULT_RETRY_TIMES     = 8
 	RETRY_WAIT_SECS         = 5
-	DEFAULT_THREAD          = 128
+	DEFAULT_THREAD          = 64
 	DEFAULT_REQUEST_TIMEOUT = time.Second * 7
 )
 
