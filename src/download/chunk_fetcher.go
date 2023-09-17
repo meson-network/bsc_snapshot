@@ -49,7 +49,6 @@ func (c *ChunkFetcher) Download(endPoints []string, retryNum int,
 		// fmt.Println("seek err:", err)
 		errFn(c.chunkInfo)
 	}
-	defer resp.Body.Close()
 
 	// try some times if download failed
 	downloaded := int64(0)

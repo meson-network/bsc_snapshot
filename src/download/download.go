@@ -1,7 +1,6 @@
 package download
 
 import (
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"os"
