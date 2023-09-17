@@ -4,10 +4,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"hash"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,31 +38,33 @@ func NewChunkFetcher(filePath string,
 	}
 }
 
-func (c *ChunkFetcher) Download(downloadUrl string) (int64, error) {
-	file, err := os.OpenFile(c.filePath, os.O_RDWR, os.ModePerm)
-	if err != nil {
-		return 0, err
-	}
-	defer file.Close()
-
-	_, err = file.Seek(c.chunkOffset, 0)
-	if err != nil {
-		// fmt.Println("seek err:", err)
-		return 0, err
-	}
-
-	if exists := validateChunk(file, c.chunkSize, c.chunkMd5); exists {
-		return c.chunkSize, nil
-	}
+func (c *ChunkFetcher) Download(downloadUrl string, downloaded_bytes int64, file *os.File, md5hash *hash.Hash) (int64, error) {
 
 	// download
-	resp, err := c.fetchChunk(downloadUrl)
+	resp, err := c.fetchChunk(downloadUrl, int(downloaded_bytes))
 	if err != nil {
 		// fmt.Println("fetch err:", err)
 		return 0, err
 	}
 	defer resp.Body.Close()
-	if c.chunkSize != resp.ContentLength {
+
+	if resp.StatusCode<200 || resp.StatusCode>=400{
+		return 0, errors.New("response status code error")
+	}
+
+	haveRead := downloaded_bytes
+	if downloaded_bytes > 0 {
+		if resp.StatusCode != http.StatusPartialContent {
+			haveRead = 0
+		}
+
+		contentRange := resp.Header.Get("Content-Range")
+		if contentRange == "" {
+			haveRead = 0
+		}
+	}
+
+	if (c.chunkSize - haveRead) != resp.ContentLength {
 		return 0, errors.New("remote file size error")
 	}
 
@@ -68,12 +72,13 @@ func (c *ChunkFetcher) Download(downloadUrl string) (int64, error) {
 	reader := &custom_reader.CustomReader{
 		Reader:      resp.Body,
 		Size:        c.chunkSize,
+		Have_read:   haveRead,
 		DownloadBar: c.downloadBar,
 		UploadBar:   nil,
 	}
 
-	file.Seek(c.chunkOffset, 0)
-	return writeChunk(reader, file, c.chunkSize, c.chunkMd5)
+	file.Seek(c.chunkOffset+haveRead, 0)
+	return writeChunk(reader, file, c.chunkSize, c.chunkMd5, md5hash)
 }
 
 func validateChunk(src io.Reader, chunkSize int64, chunkMd5 string) bool {
@@ -93,14 +98,13 @@ func validateChunk(src io.Reader, chunkSize int64, chunkMd5 string) bool {
 	return false
 }
 
-func writeChunk(src io.Reader, dst io.Writer, chunkSize int64, chunkMd5 string) (int64, error) {
+func writeChunk(src io.Reader, dst io.Writer, chunkSize int64, chunkMd5 string, md5Hash *hash.Hash) (int64, error) {
 
-	md5hash := md5.New()
-	target := io.MultiWriter(dst, md5hash)
+	target := io.MultiWriter(dst, *md5Hash)
 
 	copySize := copyContent(target, src)
 
-	md5Str := hex.EncodeToString(md5hash.Sum(nil))
+	md5Str := hex.EncodeToString((*md5Hash).Sum(nil))
 	if strings.EqualFold(md5Str, chunkMd5) {
 		return copySize, nil
 	}
@@ -108,7 +112,7 @@ func writeChunk(src io.Reader, dst io.Writer, chunkSize int64, chunkMd5 string) 
 	return copySize, errors.New("md5 not equal")
 }
 
-func (c *ChunkFetcher) fetchChunk(downloadUrl string) (*http.Response, error) {
+func (c *ChunkFetcher) fetchChunk(downloadUrl string, offset int) (*http.Response, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
@@ -121,7 +125,16 @@ func (c *ChunkFetcher) fetchChunk(downloadUrl string) (*http.Response, error) {
 			ResponseHeaderTimeout: DEFAULT_REQUEST_TIMEOUT,
 		},
 	}
-	resp, err := client.Get(downloadUrl)
+
+	req, err := http.NewRequest("GET", downloadUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	if offset > 0 {
+		req.Header.Set("Range", "bytes="+strconv.Itoa(offset)+"-")
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
