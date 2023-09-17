@@ -14,7 +14,7 @@ Multi threads downloading with multi endpoints significantly reduce the time cos
 
 The service providers currently include meson.network which is a globally distributed files cache layer.
 
-GreenField can be configured to work as the storage layer.
+Storage layer in the future can be configured to support multiple storage providers.
 
 Comparison with other download utils:
 
